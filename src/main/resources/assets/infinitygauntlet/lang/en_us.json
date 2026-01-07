@@ -1,0 +1,15 @@
+{
+    "item.infinitygauntlet.infinity_gauntlet": "Infinity Gauntlet",
+    "item.infinitygauntlet.space_stone": "Space Stone",
+    "item.infinitygauntlet.time_stone": "Time Stone",
+    "item.infinitygauntlet.reality_stone": "Reality Stone",
+    "item.infinitygauntlet.power_stone": "Power Stone",
+    "item.infinitygauntlet.mind_stone": "Mind Stone",
+    "item.infinitygauntlet.soul_stone": "Soul Stone",
+    "item.infinitygauntlet.vibranium_ingot": "Vibranium Ingot",
+    "item.infinitygauntlet.vibranium_nugget": "Vibranium Nugget",
+    "item.infinitygauntlet.gauntlet_core": "Gauntlet Core",
+    "block.infinitygauntlet.vibranium_ore": "Vibranium Ore",
+    "block.infinitygauntlet.vibranium_block": "Block of Vibranium",
+    "itemGroup.infinitygauntlet": "Infinity Gauntlet"
+}

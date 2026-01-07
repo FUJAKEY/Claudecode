@@ -1,0 +1,15 @@
+{
+    "item.infinitygauntlet.infinity_gauntlet": "Перчатка Бесконечности",
+    "item.infinitygauntlet.space_stone": "Камень Пространства",
+    "item.infinitygauntlet.time_stone": "Камень Времени",
+    "item.infinitygauntlet.reality_stone": "Камень Реальности",
+    "item.infinitygauntlet.power_stone": "Камень Силы",
+    "item.infinitygauntlet.mind_stone": "Камень Разума",
+    "item.infinitygauntlet.soul_stone": "Камень Души",
+    "item.infinitygauntlet.vibranium_ingot": "Вибраниумный слиток",
+    "item.infinitygauntlet.vibranium_nugget": "Кусочек вибраниума",
+    "item.infinitygauntlet.gauntlet_core": "Ядро перчатки",
+    "block.infinitygauntlet.vibranium_ore": "Вибраниумная руда",
+    "block.infinitygauntlet.vibranium_block": "Блок вибраниума",
+    "itemGroup.infinitygauntlet": "Перчатка Бесконечности"
+}

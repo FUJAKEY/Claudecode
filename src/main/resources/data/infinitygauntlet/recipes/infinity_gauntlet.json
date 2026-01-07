@@ -1,0 +1,23 @@
+{
+    "type": "minecraft:crafting_shaped",
+    "pattern": [
+        "VNV",
+        "NCN",
+        "V V"
+    ],
+    "key": {
+        "V": {
+            "item": "infinitygauntlet:vibranium_ingot"
+        },
+        "N": {
+            "item": "minecraft:nether_star"
+        },
+        "C": {
+            "item": "infinitygauntlet:gauntlet_core"
+        }
+    },
+    "result": {
+        "item": "infinitygauntlet:infinity_gauntlet",
+        "count": 1
+    }
+}

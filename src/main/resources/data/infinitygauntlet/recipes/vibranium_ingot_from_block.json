@@ -1,0 +1,12 @@
+{
+    "type": "minecraft:crafting_shapeless",
+    "ingredients": [
+        {
+            "item": "infinitygauntlet:vibranium_block"
+        }
+    ],
+    "result": {
+        "item": "infinitygauntlet:vibranium_ingot",
+        "count": 9
+    }
+}

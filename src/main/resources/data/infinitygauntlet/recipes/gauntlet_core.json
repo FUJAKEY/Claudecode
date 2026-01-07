@@ -1,0 +1,23 @@
+{
+    "type": "minecraft:crafting_shaped",
+    "pattern": [
+        "GVG",
+        "VDV",
+        "GVG"
+    ],
+    "key": {
+        "G": {
+            "item": "minecraft:gold_block"
+        },
+        "V": {
+            "item": "infinitygauntlet:vibranium_ingot"
+        },
+        "D": {
+            "item": "minecraft:diamond_block"
+        }
+    },
+    "result": {
+        "item": "infinitygauntlet:gauntlet_core",
+        "count": 1
+    }
+}

@@ -1,0 +1,9 @@
+{
+    "type": "minecraft:smelting",
+    "ingredient": {
+        "item": "infinitygauntlet:vibranium_ore"
+    },
+    "result": "infinitygauntlet:vibranium_ingot",
+    "experience": 2.0,
+    "cookingtime": 200
+}

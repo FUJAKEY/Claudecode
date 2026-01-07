@@ -1,0 +1,17 @@
+{
+    "type": "minecraft:crafting_shaped",
+    "pattern": [
+        "NNN",
+        "NNN",
+        "NNN"
+    ],
+    "key": {
+        "N": {
+            "item": "infinitygauntlet:vibranium_nugget"
+        }
+    },
+    "result": {
+        "item": "infinitygauntlet:vibranium_ingot",
+        "count": 1
+    }
+}
