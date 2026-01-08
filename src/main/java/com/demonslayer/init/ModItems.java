@@ -86,6 +86,32 @@ public class ModItems {
     public static final RegistryObject<Item> HASHIRA_BADGE = ITEMS.register("hashira_badge",
             () -> new Item(new Item.Properties().tab(ModItemGroup.DEMON_SLAYER_TAB).stacksTo(1).rarity(Rarity.EPIC)));
 
+    // ========== V3.0 NEW ITEMS ==========
+    public static final RegistryObject<Item> CHAIN_NICHIRIN = ITEMS.register("chain_nichirin",
+            () -> new ChainNichirinItem(new Item.Properties().tab(ModItemGroup.DEMON_SLAYER_TAB).stacksTo(1).rarity(Rarity.EPIC)));
+
+    // Hashira Haoris
+    public static final RegistryObject<Item> HAORI_TANJURO = ITEMS.register("haori_tanjuro",
+            () -> new HashiraHaoriItem(HashiraHaoriItem.HashiraType.TANJURO, new Item.Properties().tab(ModItemGroup.DEMON_SLAYER_TAB).stacksTo(1).rarity(Rarity.EPIC)));
+
+    public static final RegistryObject<Item> HAORI_GIYU = ITEMS.register("haori_giyu",
+            () -> new HashiraHaoriItem(HashiraHaoriItem.HashiraType.GIYU, new Item.Properties().tab(ModItemGroup.DEMON_SLAYER_TAB).stacksTo(1).rarity(Rarity.EPIC)));
+
+    public static final RegistryObject<Item> HAORI_RENGOKU = ITEMS.register("haori_rengoku",
+            () -> new HashiraHaoriItem(HashiraHaoriItem.HashiraType.RENGOKU, new Item.Properties().tab(ModItemGroup.DEMON_SLAYER_TAB).stacksTo(1).rarity(Rarity.EPIC)));
+
+    public static final RegistryObject<Item> HAORI_SHINOBU = ITEMS.register("haori_shinobu",
+            () -> new HashiraHaoriItem(HashiraHaoriItem.HashiraType.SHINOBU, new Item.Properties().tab(ModItemGroup.DEMON_SLAYER_TAB).stacksTo(1).rarity(Rarity.EPIC)));
+
+    public static final RegistryObject<Item> HAORI_TENGEN = ITEMS.register("haori_tengen",
+            () -> new HashiraHaoriItem(HashiraHaoriItem.HashiraType.TENGEN, new Item.Properties().tab(ModItemGroup.DEMON_SLAYER_TAB).stacksTo(1).rarity(Rarity.EPIC)));
+
+    public static final RegistryObject<Item> HAORI_MITSURI = ITEMS.register("haori_mitsuri",
+            () -> new HashiraHaoriItem(HashiraHaoriItem.HashiraType.MITSURI, new Item.Properties().tab(ModItemGroup.DEMON_SLAYER_TAB).stacksTo(1).rarity(Rarity.EPIC)));
+
+    public static final RegistryObject<Item> HAORI_MUICHIRO = ITEMS.register("haori_muichiro",
+            () -> new HashiraHaoriItem(HashiraHaoriItem.HashiraType.MUICHIRO, new Item.Properties().tab(ModItemGroup.DEMON_SLAYER_TAB).stacksTo(1).rarity(Rarity.EPIC)));
+
     public static void register(IEventBus eventBus) {
         ITEMS.register(eventBus);
     }
