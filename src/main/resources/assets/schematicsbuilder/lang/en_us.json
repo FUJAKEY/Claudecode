@@ -1,0 +1,10 @@
+{
+    "key.category.schematicsbuilder": "Schematics Builder",
+    "key.schematicsbuilder.open_menu": "Open Schematics Menu",
+    "key.schematicsbuilder.toggle_preview": "Toggle Preview",
+    "key.schematicsbuilder.rotate_left": "Rotate Left",
+    "key.schematicsbuilder.rotate_right": "Rotate Right",
+    "key.schematicsbuilder.start_build": "Start Build",
+    "key.schematicsbuilder.stop_build": "Stop Build",
+    "key.schematicsbuilder.toggle_pause": "Pause/Resume Build"
+}

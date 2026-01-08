@@ -1,0 +1,10 @@
+{
+    "key.category.schematicsbuilder": "Схематик Билдер",
+    "key.schematicsbuilder.open_menu": "Открыть меню схематик",
+    "key.schematicsbuilder.toggle_preview": "Превью",
+    "key.schematicsbuilder.rotate_left": "Повернуть влево",
+    "key.schematicsbuilder.rotate_right": "Повернуть вправо",
+    "key.schematicsbuilder.start_build": "Начать строительство",
+    "key.schematicsbuilder.stop_build": "Остановить",
+    "key.schematicsbuilder.toggle_pause": "Пауза/Продолжить"
+}

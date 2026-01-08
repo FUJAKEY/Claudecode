@@ -1,0 +1,41 @@
+modLoader="javafml"
+loaderVersion="[36,)"
+license="MIT"
+
+[[mods]]
+modId="schematicsbuilder"
+version="1.0.0"
+displayName="Schematics Builder"
+authors="AntigravityAI"
+description='''
+Load and auto-build schematics with AI precision!
+
+Features:
+- Load .schematic and .litematic files
+- Layer-by-layer auto-building  
+- Rotate and position schematics
+- Progress tracking
+- Creative and survival mode support
+
+Put your schematic files in the 'schematics' folder!
+
+Commands:
+/schem list - List schematics
+/schem load <file> - Load schematic
+/schem build - Start building
+/schem stop - Stop building
+'''
+
+[[dependencies.schematicsbuilder]]
+modId="forge"
+mandatory=true
+versionRange="[36,)"
+ordering="NONE"
+side="BOTH"
+
+[[dependencies.schematicsbuilder]]
+modId="minecraft"
+mandatory=true
+versionRange="[1.16.5,1.17)"
+ordering="NONE"
+side="BOTH"
