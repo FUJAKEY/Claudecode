@@ -11,5 +11,12 @@
     "item.infinitygauntlet.gauntlet_core": "Ядро перчатки",
     "block.infinitygauntlet.vibranium_ore": "Вибраниумная руда",
     "block.infinitygauntlet.vibranium_block": "Блок вибраниума",
-    "itemGroup.infinitygauntlet": "Перчатка Бесконечности"
+    "entity.infinitygauntlet.thanos": "Танос",
+    "itemGroup.infinitygauntlet": "Перчатка Бесконечности",
+    "key.categories.infinitygauntlet": "Перчатка Бесконечности",
+    "key.infinitygauntlet.use_ability": "Использовать способность",
+    "key.infinitygauntlet.switch_stone": "Сменить камень",
+    "key.infinitygauntlet.switch_sub_ability": "Сменить подспособность",
+    "key.infinitygauntlet.combo_ability": "Комбо-способность",
+    "key.infinitygauntlet.toggle_infinity": "Вкл/Выкл Бесконечность"
 }

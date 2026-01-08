@@ -11,5 +11,12 @@
     "item.infinitygauntlet.gauntlet_core": "Gauntlet Core",
     "block.infinitygauntlet.vibranium_ore": "Vibranium Ore",
     "block.infinitygauntlet.vibranium_block": "Block of Vibranium",
-    "itemGroup.infinitygauntlet": "Infinity Gauntlet"
+    "entity.infinitygauntlet.thanos": "Thanos",
+    "itemGroup.infinitygauntlet": "Infinity Gauntlet",
+    "key.categories.infinitygauntlet": "Infinity Gauntlet",
+    "key.infinitygauntlet.use_ability": "Use Ability",
+    "key.infinitygauntlet.switch_stone": "Switch Stone",
+    "key.infinitygauntlet.switch_sub_ability": "Switch Sub-Ability",
+    "key.infinitygauntlet.combo_ability": "Combo Ability",
+    "key.infinitygauntlet.toggle_infinity": "Toggle Infinity"
 }
