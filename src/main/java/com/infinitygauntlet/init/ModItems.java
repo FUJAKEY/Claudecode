@@ -132,6 +132,13 @@ public class ModItems {
                     .rarity(Rarity.EPIC)
                     .fireResistant()));
 
+    // ========== GUIDE BOOK ==========
+    public static final RegistryObject<Item> GUIDE_BOOK = ITEMS.register("guide_book",
+            () -> new GuideBookItem(new Item.Properties()
+                    .tab(ModItemGroup.INFINITY_GAUNTLET_TAB)
+                    .stacksTo(1)
+                    .rarity(Rarity.UNCOMMON)));
+
     public static void register(IEventBus eventBus) {
         ITEMS.register(eventBus);
     }

@@ -1,0 +1,14 @@
+{
+    "type": "minecraft:crafting_shapeless",
+    "ingredients": [
+        {
+            "item": "minecraft:book"
+        },
+        {
+            "item": "infinitygauntlet:vibranium_nugget"
+        }
+    ],
+    "result": {
+        "item": "infinitygauntlet:guide_book"
+    }
+}
