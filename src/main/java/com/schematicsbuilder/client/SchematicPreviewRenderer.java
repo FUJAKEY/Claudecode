@@ -20,8 +20,8 @@ import org.lwjgl.opengl.GL11;
 import java.util.Map;
 
 /**
- * Renders ghost preview of schematic before building
- * Shows where blocks will be placed with semi-transparent overlay
+ * Renders ghost preview of schematic
+ * NOW SHOWS DURING BUILDING with progress indication!
  */
 @Mod.EventBusSubscriber(modid = SchematicsBuilderMod.MOD_ID, value = Dist.CLIENT)
 public class SchematicPreviewRenderer {
@@ -53,8 +53,8 @@ public class SchematicPreviewRenderer {
         SchematicData schematic = ClientAutoBuilder.getInstance().getSchematic();
         if (schematic == null)
             return;
-        if (ClientAutoBuilder.getInstance().isRunning())
-            return; // Don't show during building
+
+        // ALWAYS show preview (removed check for isRunning)
 
         MatrixStack matrixStack = event.getMatrixStack();
 
@@ -79,6 +79,7 @@ public class SchematicPreviewRenderer {
         RenderSystem.disableTexture();
         RenderSystem.disableCull();
         RenderSystem.depthMask(false);
+        RenderSystem.disableDepthTest(); // Allow see-through
 
         Tessellator tessellator = Tessellator.getInstance();
         BufferBuilder buffer = tessellator.getBuilder();
@@ -88,7 +89,7 @@ public class SchematicPreviewRenderer {
         Matrix4f matrix = matrixStack.last().pose();
 
         int rendered = 0;
-        int maxRender = 5000; // Limit for performance
+        int maxRender = 8000; // Higher limit
 
         for (Map.Entry<BlockPos, BlockState> entry : schematic.getBlocks().entrySet()) {
             if (rendered >= maxRender)
@@ -97,42 +98,122 @@ public class SchematicPreviewRenderer {
             BlockPos worldPos = schematic.toWorldPos(entry.getKey());
             BlockState state = entry.getValue();
 
-            // Skip if already placed
+            // Skip if already placed correctly
             if (mc.level.getBlockState(worldPos).getBlock() == state.getBlock()) {
                 continue;
             }
 
-            // Get block color based on type
-            float r = 0.2f, g = 0.8f, b = 0.2f, a = 0.3f;
+            // Get block color - BRIGHTER colors
+            float r, g, b, a;
+            a = 0.6f; // More visible!
 
-            // Different colors for different block types
             String blockName = state.getBlock().getRegistryName().getPath();
-            if (blockName.contains("stone") || blockName.contains("cobble")) {
-                r = 0.5f;
-                g = 0.5f;
-                b = 0.5f;
-            } else if (blockName.contains("wood") || blockName.contains("log") || blockName.contains("plank")) {
+
+            // Color coding by material type
+            if (blockName.contains("stone") || blockName.contains("cobble") || blockName.contains("andesite")
+                    || blockName.contains("diorite") || blockName.contains("granite")) {
                 r = 0.6f;
-                g = 0.4f;
-                b = 0.2f;
-            } else if (blockName.contains("glass")) {
+                g = 0.6f;
+                b = 0.6f; // Gray
+            } else if (blockName.contains("dirt") || blockName.contains("grass") || blockName.contains("podzol")) {
                 r = 0.4f;
+                g = 0.3f;
+                b = 0.2f; // Brown
+            } else if (blockName.contains("wood") || blockName.contains("log") || blockName.contains("plank")
+                    || blockName.contains("oak") || blockName.contains("spruce") || blockName.contains("birch")
+                    || blockName.contains("jungle") || blockName.contains("acacia") || blockName.contains("dark_oak")) {
+                r = 0.7f;
+                g = 0.5f;
+                b = 0.3f; // Wood brown
+            } else if (blockName.contains("glass")) {
+                r = 0.6f;
+                g = 0.9f;
+                b = 1.0f;
+                a = 0.4f; // Light blue
+            } else if (blockName.contains("brick")) {
+                r = 0.8f;
+                g = 0.4f;
+                b = 0.3f; // Brick red
+            } else if (blockName.contains("iron") || blockName.contains("metal")) {
+                r = 0.9f;
+                g = 0.9f;
+                b = 0.9f; // White/silver
+            } else if (blockName.contains("gold")) {
+                r = 1.0f;
+                g = 0.85f;
+                b = 0.0f; // Gold
+            } else if (blockName.contains("diamond") || blockName.contains("lapis")) {
+                r = 0.3f;
+                g = 0.7f;
+                b = 1.0f; // Blue
+            } else if (blockName.contains("emerald") || blockName.contains("leaves")) {
+                r = 0.2f;
+                g = 0.9f;
+                b = 0.3f; // Green
+            } else if (blockName.contains("redstone") || blockName.contains("nether")) {
+                r = 1.0f;
+                g = 0.2f;
+                b = 0.2f; // Red
+            } else if (blockName.contains("obsidian") || blockName.contains("coal")) {
+                r = 0.2f;
+                g = 0.1f;
+                b = 0.3f; // Dark purple
+            } else if (blockName.contains("sand") || blockName.contains("sandstone")) {
+                r = 0.95f;
+                g = 0.9f;
+                b = 0.6f; // Sandy yellow
+            } else if (blockName.contains("wool") || blockName.contains("concrete")
+                    || blockName.contains("terracotta")) {
+                // Colorful blocks - cyan default
+                r = 0.3f;
                 g = 0.8f;
                 b = 0.9f;
-                a = 0.2f;
-            } else if (blockName.contains("brick")) {
-                r = 0.7f;
-                g = 0.3f;
-                b = 0.2f;
+            } else if (blockName.contains("water")) {
+                r = 0.2f;
+                g = 0.4f;
+                b = 0.9f;
+                a = 0.5f;
+            } else if (blockName.contains("lava")) {
+                r = 1.0f;
+                g = 0.5f;
+                b = 0.0f;
+            } else {
+                // Default - bright green for unknown
+                r = 0.3f;
+                g = 0.95f;
+                b = 0.4f;
             }
 
-            // Render cube
+            // Render cube with outline
             renderGhostCube(buffer, matrix, worldPos, r, g, b, a);
             rendered++;
         }
 
         tessellator.end();
 
+        // Render wireframes for better visibility
+        RenderSystem.lineWidth(1.5f);
+        buffer.begin(GL11.GL_LINES, DefaultVertexFormats.POSITION_COLOR);
+
+        rendered = 0;
+        for (Map.Entry<BlockPos, BlockState> entry : schematic.getBlocks().entrySet()) {
+            if (rendered >= maxRender / 2)
+                break; // Less wireframes
+
+            BlockPos worldPos = schematic.toWorldPos(entry.getKey());
+            BlockState state = entry.getValue();
+
+            if (mc.level.getBlockState(worldPos).getBlock() == state.getBlock()) {
+                continue;
+            }
+
+            renderWireframeCube(buffer, matrix, worldPos, 1.0f, 1.0f, 1.0f, 0.8f);
+            rendered++;
+        }
+
+        tessellator.end();
+
+        RenderSystem.enableDepthTest();
         RenderSystem.depthMask(true);
         RenderSystem.enableCull();
         RenderSystem.enableTexture();
@@ -144,44 +225,83 @@ public class SchematicPreviewRenderer {
         float x = pos.getX();
         float y = pos.getY();
         float z = pos.getZ();
-        float s = 0.98f; // Slightly smaller to avoid z-fighting
-        float offset = 0.01f;
+        float s = 0.98f;
+        float o = 0.01f; // offset
 
+        // All 6 faces
         // Bottom
-        buffer.vertex(matrix, x + offset, y + offset, z + offset).color(r, g, b, a).endVertex();
-        buffer.vertex(matrix, x + s, y + offset, z + offset).color(r, g, b, a).endVertex();
-        buffer.vertex(matrix, x + s, y + offset, z + s).color(r, g, b, a).endVertex();
-        buffer.vertex(matrix, x + offset, y + offset, z + s).color(r, g, b, a).endVertex();
+        buffer.vertex(matrix, x + o, y + o, z + o).color(r, g, b, a).endVertex();
+        buffer.vertex(matrix, x + s, y + o, z + o).color(r, g, b, a).endVertex();
+        buffer.vertex(matrix, x + s, y + o, z + s).color(r, g, b, a).endVertex();
+        buffer.vertex(matrix, x + o, y + o, z + s).color(r, g, b, a).endVertex();
 
         // Top
-        buffer.vertex(matrix, x + offset, y + s, z + s).color(r, g, b, a).endVertex();
+        buffer.vertex(matrix, x + o, y + s, z + s).color(r, g, b, a).endVertex();
         buffer.vertex(matrix, x + s, y + s, z + s).color(r, g, b, a).endVertex();
-        buffer.vertex(matrix, x + s, y + s, z + offset).color(r, g, b, a).endVertex();
-        buffer.vertex(matrix, x + offset, y + s, z + offset).color(r, g, b, a).endVertex();
+        buffer.vertex(matrix, x + s, y + s, z + o).color(r, g, b, a).endVertex();
+        buffer.vertex(matrix, x + o, y + s, z + o).color(r, g, b, a).endVertex();
 
         // North
-        buffer.vertex(matrix, x + offset, y + offset, z + offset).color(r, g, b, a).endVertex();
-        buffer.vertex(matrix, x + offset, y + s, z + offset).color(r, g, b, a).endVertex();
-        buffer.vertex(matrix, x + s, y + s, z + offset).color(r, g, b, a).endVertex();
-        buffer.vertex(matrix, x + s, y + offset, z + offset).color(r, g, b, a).endVertex();
+        buffer.vertex(matrix, x + o, y + o, z + o).color(r, g, b, a).endVertex();
+        buffer.vertex(matrix, x + o, y + s, z + o).color(r, g, b, a).endVertex();
+        buffer.vertex(matrix, x + s, y + s, z + o).color(r, g, b, a).endVertex();
+        buffer.vertex(matrix, x + s, y + o, z + o).color(r, g, b, a).endVertex();
 
         // South
-        buffer.vertex(matrix, x + s, y + offset, z + s).color(r, g, b, a).endVertex();
+        buffer.vertex(matrix, x + s, y + o, z + s).color(r, g, b, a).endVertex();
         buffer.vertex(matrix, x + s, y + s, z + s).color(r, g, b, a).endVertex();
-        buffer.vertex(matrix, x + offset, y + s, z + s).color(r, g, b, a).endVertex();
-        buffer.vertex(matrix, x + offset, y + offset, z + s).color(r, g, b, a).endVertex();
+        buffer.vertex(matrix, x + o, y + s, z + s).color(r, g, b, a).endVertex();
+        buffer.vertex(matrix, x + o, y + o, z + s).color(r, g, b, a).endVertex();
 
         // West
-        buffer.vertex(matrix, x + offset, y + offset, z + s).color(r, g, b, a).endVertex();
-        buffer.vertex(matrix, x + offset, y + s, z + s).color(r, g, b, a).endVertex();
-        buffer.vertex(matrix, x + offset, y + s, z + offset).color(r, g, b, a).endVertex();
-        buffer.vertex(matrix, x + offset, y + offset, z + offset).color(r, g, b, a).endVertex();
+        buffer.vertex(matrix, x + o, y + o, z + s).color(r, g, b, a).endVertex();
+        buffer.vertex(matrix, x + o, y + s, z + s).color(r, g, b, a).endVertex();
+        buffer.vertex(matrix, x + o, y + s, z + o).color(r, g, b, a).endVertex();
+        buffer.vertex(matrix, x + o, y + o, z + o).color(r, g, b, a).endVertex();
 
         // East
-        buffer.vertex(matrix, x + s, y + offset, z + offset).color(r, g, b, a).endVertex();
-        buffer.vertex(matrix, x + s, y + s, z + offset).color(r, g, b, a).endVertex();
+        buffer.vertex(matrix, x + s, y + o, z + o).color(r, g, b, a).endVertex();
+        buffer.vertex(matrix, x + s, y + s, z + o).color(r, g, b, a).endVertex();
         buffer.vertex(matrix, x + s, y + s, z + s).color(r, g, b, a).endVertex();
-        buffer.vertex(matrix, x + s, y + offset, z + s).color(r, g, b, a).endVertex();
+        buffer.vertex(matrix, x + s, y + o, z + s).color(r, g, b, a).endVertex();
+    }
+
+    private static void renderWireframeCube(BufferBuilder buffer, Matrix4f matrix, BlockPos pos,
+            float r, float g, float b, float a) {
+        float x = pos.getX();
+        float y = pos.getY();
+        float z = pos.getZ();
+        float s = 1.0f;
+
+        // Bottom edges
+        buffer.vertex(matrix, x, y, z).color(r, g, b, a).endVertex();
+        buffer.vertex(matrix, x + s, y, z).color(r, g, b, a).endVertex();
+        buffer.vertex(matrix, x + s, y, z).color(r, g, b, a).endVertex();
+        buffer.vertex(matrix, x + s, y, z + s).color(r, g, b, a).endVertex();
+        buffer.vertex(matrix, x + s, y, z + s).color(r, g, b, a).endVertex();
+        buffer.vertex(matrix, x, y, z + s).color(r, g, b, a).endVertex();
+        buffer.vertex(matrix, x, y, z + s).color(r, g, b, a).endVertex();
+        buffer.vertex(matrix, x, y, z).color(r, g, b, a).endVertex();
+
+        // Top edges
+        buffer.vertex(matrix, x, y + s, z).color(r, g, b, a).endVertex();
+        buffer.vertex(matrix, x + s, y + s, z).color(r, g, b, a).endVertex();
+        buffer.vertex(matrix, x + s, y + s, z).color(r, g, b, a).endVertex();
+        buffer.vertex(matrix, x + s, y + s, z + s).color(r, g, b, a).endVertex();
+        buffer.vertex(matrix, x + s, y + s, z + s).color(r, g, b, a).endVertex();
+        buffer.vertex(matrix, x, y + s, z + s).color(r, g, b, a).endVertex();
+        buffer.vertex(matrix, x, y + s, z + s).color(r, g, b, a).endVertex();
+        buffer.vertex(matrix, x, y + s, z).color(r, g, b, a).endVertex();
+
+        // Vertical edges
+        buffer.vertex(matrix, x, y, z).color(r, g, b, a).endVertex();
+        buffer.vertex(matrix, x, y + s, z).color(r, g, b, a).endVertex();
+        buffer.vertex(matrix, x + s, y, z).color(r, g, b, a).endVertex();
+        buffer.vertex(matrix, x + s, y + s, z).color(r, g, b, a).endVertex();
+        buffer.vertex(matrix, x + s, y, z + s).color(r, g, b, a).endVertex();
+        buffer.vertex(matrix, x + s, y + s, z + s).color(r, g, b, a).endVertex();
+        buffer.vertex(matrix, x, y, z + s).color(r, g, b, a).endVertex();
+        buffer.vertex(matrix, x, y + s, z + s).color(r, g, b, a).endVertex();
     }
 
     private static void renderBoundingBox(MatrixStack matrixStack, SchematicData schematic) {
@@ -190,8 +310,9 @@ public class SchematicPreviewRenderer {
         int h = schematic.getHeight();
         int l = schematic.getLength();
 
-        RenderSystem.lineWidth(2.0f);
+        RenderSystem.lineWidth(3.0f); // Thicker line
         RenderSystem.disableTexture();
+        RenderSystem.disableDepthTest();
 
         Tessellator tessellator = Tessellator.getInstance();
         BufferBuilder buffer = tessellator.getBuilder();
@@ -241,6 +362,7 @@ public class SchematicPreviewRenderer {
 
         tessellator.end();
 
+        RenderSystem.enableDepthTest();
         RenderSystem.enableTexture();
     }
 }

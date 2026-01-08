@@ -2,11 +2,13 @@ package com.schematicsbuilder.client;
 
 import com.schematicsbuilder.SchematicsBuilderMod;
 import com.schematicsbuilder.schematic.SchematicData;
+import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.entity.player.ClientPlayerEntity;
 import net.minecraft.item.BlockItem;
+import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.util.Direction;
 import net.minecraft.util.Hand;
@@ -14,14 +16,13 @@ import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.BlockRayTraceResult;
 import net.minecraft.util.math.vector.Vector3d;
 import net.minecraft.util.text.StringTextComponent;
-import net.minecraft.util.text.TextFormatting;
 
 import java.util.*;
 
 /**
- * CLIENT-SIDE Auto Builder v3.0
+ * CLIENT-SIDE Auto Builder v3.1
  * Works on ANY server - simulates real player actions
- * Now with anti-detection and smart pathfinding!
+ * FIXED: Inventory detection and block placement
  */
 public class ClientAutoBuilder {
 
@@ -58,6 +59,9 @@ public class ClientAutoBuilder {
     // Linked chests (client-side storage)
     private List<BlockPos> linkedChests = new ArrayList<>();
 
+    // Debug
+    private int skipCount = 0;
+
     public static ClientAutoBuilder getInstance() {
         if (instance == null) {
             instance = new ClientAutoBuilder();
@@ -85,6 +89,7 @@ public class ClientAutoBuilder {
         this.maxLayer = data.getHeight();
         this.blocksPlaced = 0;
         this.currentLayer = 0;
+        this.skipCount = 0;
 
         sendMessage("§a✓ Loaded: §e" + data.getName() + " §7(" + totalBlocks + " blocks, " + maxLayer + " layers)");
         sendMessage("§7" + AntiDetection.getSettingsString());
@@ -111,6 +116,7 @@ public class ClientAutoBuilder {
 
         running = true;
         paused = false;
+        skipCount = 0;
 
         sendMessage("§a═══════════════════════════════════");
         sendMessage("§a§l  ▶ Auto-Build Started!");
@@ -206,19 +212,40 @@ public class ClientAutoBuilder {
             return;
         }
 
-        // Check if position is placeable
+        // Check if position is placeable (has adjacent block)
         if (!canPlaceAt(task.pos)) {
             // Skip this block for now, try later
             buildQueue.poll();
             buildQueue.add(task);
+            skipCount++;
+
+            // If we skipped too many, there might be an issue
+            if (skipCount > totalBlocks * 2) {
+                sendMessage("§c⚠ Can't place blocks - no adjacent surfaces. Build something first!");
+                paused = true;
+                skipCount = 0;
+            }
             return;
         }
 
-        // Find block in hotbar
-        int slot = findBlockInHotbar(task.state);
+        skipCount = 0;
+
+        // Find block in inventory (hotbar + main inventory)
+        int slot = findBlockInInventory(task.state.getBlock());
 
         if (slot == -1) {
-            // Not in hotbar - try to fetch from chest
+            // Check if it's creative mode
+            if (mc.player.isCreative()) {
+                // In creative, just place directly (server handles it)
+                if (placeBlockCreative(task.pos, task.state)) {
+                    buildQueue.poll();
+                    blocksPlaced++;
+                    updateLayerProgress(task.layer);
+                }
+                return;
+            }
+
+            // Not in inventory - try to fetch from chest
             if (!linkedChests.isEmpty()) {
                 BlockPos chest = findChestWithBlock(task.state);
                 if (chest != null) {
@@ -228,27 +255,36 @@ public class ClientAutoBuilder {
             }
 
             // Can't find block anywhere
-            sendMessage("§c⚠ Missing: " + task.state.getBlock().getName().getString());
-            sendMessage("§7Add to hotbar or link a chest with /schem chest link");
+            sendMessage("§c⚠ Missing: §e" + task.state.getBlock().getName().getString());
+            sendMessage("§7Add to inventory or link a chest");
             paused = true;
             return;
         }
 
-        // Switch to correct slot
+        // If block is not in hotbar, move it there first
+        if (slot >= 9) {
+            // Swap from main inventory to hotbar
+            swapToHotbar(slot);
+            return; // Wait for next tick to place
+        }
+
+        // Switch to correct hotbar slot
         mc.player.inventory.selected = slot;
 
         // Place block!
         if (placeBlock(task.pos, task.state)) {
             buildQueue.poll();
             blocksPlaced++;
-
-            // Update layer notification
-            if (task.layer > currentLayer) {
-                currentLayer = task.layer;
-                sendActionBar(
-                        "§b📦 Layer " + (currentLayer + 1) + "/" + maxLayer + " | " + getProgress() + "% complete");
-            }
+            updateLayerProgress(task.layer);
         }
+    }
+
+    private void updateLayerProgress(int layer) {
+        if (layer > currentLayer) {
+            currentLayer = layer;
+        }
+        sendActionBar("§b📦 Layer " + (currentLayer + 1) + "/" + maxLayer + " | §e" + getProgress() + "% §7("
+                + blocksPlaced + "/" + totalBlocks + ")");
     }
 
     /**
@@ -260,10 +296,11 @@ public class ClientAutoBuilder {
             return false;
         }
 
-        // Check if there's a supporting block nearby
+        // Check if there's a solid block nearby to place against
         for (Direction dir : Direction.values()) {
-            BlockState neighbor = mc.level.getBlockState(pos.relative(dir));
-            if (!neighbor.isAir()) {
+            BlockPos neighbor = pos.relative(dir);
+            BlockState neighborState = mc.level.getBlockState(neighbor);
+            if (!neighborState.isAir() && !neighborState.getMaterial().isReplaceable()) {
                 return true;
             }
         }
@@ -271,23 +308,72 @@ public class ClientAutoBuilder {
     }
 
     /**
-     * Find block in hotbar
+     * Find block in entire inventory (hotbar + main)
+     * Returns slot index (0-8 = hotbar, 9-35 = main inventory)
      */
-    private int findBlockInHotbar(BlockState state) {
+    private int findBlockInInventory(Block block) {
+        // First check hotbar (priority)
         for (int i = 0; i < 9; i++) {
             ItemStack stack = mc.player.inventory.getItem(i);
-            if (!stack.isEmpty() && stack.getItem() instanceof BlockItem) {
-                BlockItem blockItem = (BlockItem) stack.getItem();
-                if (blockItem.getBlock() == state.getBlock()) {
-                    return i;
-                }
+            if (isMatchingBlock(stack, block)) {
+                return i;
             }
         }
+
+        // Then check main inventory
+        for (int i = 9; i < 36; i++) {
+            ItemStack stack = mc.player.inventory.getItem(i);
+            if (isMatchingBlock(stack, block)) {
+                return i;
+            }
+        }
+
         return -1;
     }
 
     /**
-     * Place block using client actions with anti-detection
+     * Check if itemstack matches the target block
+     */
+    private boolean isMatchingBlock(ItemStack stack, Block block) {
+        if (stack.isEmpty())
+            return false;
+
+        Item item = stack.getItem();
+        if (item instanceof BlockItem) {
+            BlockItem blockItem = (BlockItem) item;
+            return blockItem.getBlock() == block;
+        }
+        return false;
+    }
+
+    /**
+     * Swap item from main inventory to hotbar
+     */
+    private void swapToHotbar(int sourceSlot) {
+        // Find an empty hotbar slot or use slot 8
+        int targetSlot = 8;
+        for (int i = 0; i < 9; i++) {
+            if (mc.player.inventory.getItem(i).isEmpty()) {
+                targetSlot = i;
+                break;
+            }
+        }
+
+        // Use pick block mechanism or just select and swap
+        mc.player.inventory.selected = targetSlot;
+
+        // Creative inventory swap - pickBlock style
+        if (mc.gameMode != null) {
+            mc.gameMode.handleInventoryMouseClick(
+                    mc.player.inventoryMenu.containerId,
+                    sourceSlot, targetSlot,
+                    net.minecraft.inventory.container.ClickType.SWAP,
+                    mc.player);
+        }
+    }
+
+    /**
+     * Place block using client actions
      */
     private boolean placeBlock(BlockPos pos, BlockState targetState) {
         // Find a face to place against
@@ -295,14 +381,14 @@ public class ClientAutoBuilder {
             BlockPos neighbor = pos.relative(dir);
             BlockState neighborState = mc.level.getBlockState(neighbor);
 
-            if (!neighborState.isAir()) {
+            if (!neighborState.isAir() && !neighborState.getMaterial().isReplaceable()) {
                 // Randomized hit position (anti-detection)
                 float offset = AntiDetection.getRandomOffset();
 
                 Vector3d hitVec = new Vector3d(
-                        neighbor.getX() + offset,
-                        neighbor.getY() + offset,
-                        neighbor.getZ() + offset);
+                        neighbor.getX() + 0.5,
+                        neighbor.getY() + 0.5,
+                        neighbor.getZ() + 0.5);
 
                 BlockRayTraceResult rayTrace = new BlockRayTraceResult(
                         hitVec, dir.getOpposite(), neighbor, false);
@@ -314,6 +400,40 @@ public class ClientAutoBuilder {
                 mc.player.swing(Hand.MAIN_HAND);
 
                 return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Place block in creative mode
+     */
+    private boolean placeBlockCreative(BlockPos pos, BlockState targetState) {
+        // In creative, we can just use fill command or direct placement
+        for (Direction dir : Direction.values()) {
+            BlockPos neighbor = pos.relative(dir);
+            BlockState neighborState = mc.level.getBlockState(neighbor);
+
+            if (!neighborState.isAir()) {
+                Vector3d hitVec = new Vector3d(
+                        neighbor.getX() + 0.5,
+                        neighbor.getY() + 0.5,
+                        neighbor.getZ() + 0.5);
+
+                BlockRayTraceResult rayTrace = new BlockRayTraceResult(
+                        hitVec, dir.getOpposite(), neighbor, false);
+
+                // Pick the block to hotbar first
+                ItemStack stack = new ItemStack(targetState.getBlock().asItem());
+                if (!stack.isEmpty()) {
+                    // Set to hotbar slot
+                    mc.player.inventory.setItem(mc.player.inventory.selected, stack);
+
+                    // Place it
+                    mc.gameMode.useItemOn(mc.player, mc.level, Hand.MAIN_HAND, rayTrace);
+                    mc.player.swing(Hand.MAIN_HAND);
+                    return true;
+                }
             }
         }
         return false;
@@ -459,7 +579,6 @@ public class ClientAutoBuilder {
 
     private void complete() {
         running = false;
-        long seconds = blocksPlaced / 20; // Rough estimate
 
         sendMessage("§a═══════════════════════════════════");
         sendMessage("§a§l  ✓ BUILD COMPLETE!");
