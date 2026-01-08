@@ -1,0 +1,21 @@
+{
+    "item.demonslayer.nichirin_sword_black": "Black Nichirin Sword",
+    "item.demonslayer.nichirin_sword_blue": "Blue Nichirin Sword",
+    "item.demonslayer.nichirin_sword_red": "Red Nichirin Sword",
+    "item.demonslayer.nichirin_sword_yellow": "Yellow Nichirin Sword",
+    "item.demonslayer.nichirin_sword_green": "Green Nichirin Sword",
+    "item.demonslayer.nichirin_sword_pink": "Pink Nichirin Sword",
+    "item.demonslayer.nichirin_sword_white": "White Nichirin Sword",
+    "item.demonslayer.scarlet_crimson_ore": "Scarlet Crimson Ore",
+    "item.demonslayer.scarlet_crimson_ingot": "Scarlet Crimson Ingot",
+    "item.demonslayer.wisteria_flower": "Wisteria Flower",
+    "item.demonslayer.demon_blood": "Demon Blood",
+    "item.demonslayer.slayer_haori": "Demon Slayer Haori",
+    "item.demonslayer.slayer_pants": "Demon Slayer Pants",
+    "item.demonslayer.slayer_boots": "Demon Slayer Boots",
+    "item.demonslayer.breathing_scroll": "Total Concentration Scroll",
+    "entity.demonslayer.demon": "Demon",
+    "effect.demonslayer.total_concentration": "Total Concentration",
+    "effect.demonslayer.demon_power": "Demon Power",
+    "itemGroup.demonslayer": "Demon Slayer"
+}

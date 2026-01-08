@@ -1,0 +1,21 @@
+{
+    "item.demonslayer.nichirin_sword_black": "Чёрный Ничирин",
+    "item.demonslayer.nichirin_sword_blue": "Синий Ничирин",
+    "item.demonslayer.nichirin_sword_red": "Красный Ничирин",
+    "item.demonslayer.nichirin_sword_yellow": "Жёлтый Ничирин",
+    "item.demonslayer.nichirin_sword_green": "Зелёный Ничирин",
+    "item.demonslayer.nichirin_sword_pink": "Розовый Ничирин",
+    "item.demonslayer.nichirin_sword_white": "Белый Ничирин",
+    "item.demonslayer.scarlet_crimson_ore": "Алая багровая руда",
+    "item.demonslayer.scarlet_crimson_ingot": "Алый багровый слиток",
+    "item.demonslayer.wisteria_flower": "Цветок глицинии",
+    "item.demonslayer.demon_blood": "Кровь демона",
+    "item.demonslayer.slayer_haori": "Хаори охотника на демонов",
+    "item.demonslayer.slayer_pants": "Штаны охотника на демонов",
+    "item.demonslayer.slayer_boots": "Сапоги охотника на демонов",
+    "item.demonslayer.breathing_scroll": "Свиток Полной Концентрации",
+    "entity.demonslayer.demon": "Демон",
+    "effect.demonslayer.total_concentration": "Полная Концентрация",
+    "effect.demonslayer.demon_power": "Сила Демона",
+    "itemGroup.demonslayer": "Клинок рассекающий демонов"
+}
