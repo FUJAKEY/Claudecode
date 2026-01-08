@@ -1,9 +1,7 @@
 package com.schematicsbuilder;
 
 import com.schematicsbuilder.client.ModKeyBindings;
-import com.schematicsbuilder.network.ModNetworking;
 import net.minecraftforge.common.MinecraftForge;
-import net.minecraftforge.eventbus.api.IEventBus;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent;
 import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
@@ -14,8 +12,8 @@ import org.apache.logging.log4j.Logger;
 import java.io.File;
 
 /**
- * Schematics Builder - Auto-build schematics with AI precision
- * Supports .schematic and .litematic formats
+ * Schematics Builder - CLIENT-SIDE auto-builder
+ * Works on ANY server without server-side mod!
  */
 @Mod(SchematicsBuilderMod.MOD_ID)
 public class SchematicsBuilderMod {
@@ -25,30 +23,25 @@ public class SchematicsBuilderMod {
     public static File schematicsFolder;
 
     public SchematicsBuilderMod() {
-        IEventBus modEventBus = FMLJavaModLoadingContext.get().getModEventBus();
-
-        modEventBus.addListener(this::commonSetup);
-        modEventBus.addListener(this::clientSetup);
+        FMLJavaModLoadingContext.get().getModEventBus().addListener(this::commonSetup);
+        FMLJavaModLoadingContext.get().getModEventBus().addListener(this::clientSetup);
 
         MinecraftForge.EVENT_BUS.register(this);
 
         LOGGER.info("╔════════════════════════════════════╗");
-        LOGGER.info("║  Schematics Builder v1.0.0         ║");
-        LOGGER.info("║  Auto-build with AI precision!     ║");
+        LOGGER.info("║  Schematics Builder v2.0.0         ║");
+        LOGGER.info("║  CLIENT-SIDE Auto-Builder          ║");
+        LOGGER.info("║  Works on ANY server!              ║");
         LOGGER.info("╚════════════════════════════════════╝");
     }
 
     private void commonSetup(final FMLCommonSetupEvent event) {
-        event.enqueueWork(() -> {
-            ModNetworking.register();
-
-            // Create schematics folder
-            schematicsFolder = new File("schematics");
-            if (!schematicsFolder.exists()) {
-                schematicsFolder.mkdirs();
-                LOGGER.info("Created schematics folder: " + schematicsFolder.getAbsolutePath());
-            }
-        });
+        // Create schematics folder
+        schematicsFolder = new File("schematics");
+        if (!schematicsFolder.exists()) {
+            schematicsFolder.mkdirs();
+            LOGGER.info("Created schematics folder: " + schematicsFolder.getAbsolutePath());
+        }
 
         LOGGER.info("Schematics Builder initialized!");
     }
@@ -56,8 +49,9 @@ public class SchematicsBuilderMod {
     private void clientSetup(final FMLClientSetupEvent event) {
         ModKeyBindings.register();
         LOGGER.info("Client keybindings registered!");
-        LOGGER.info("  Press O to open Schematics Menu");
-        LOGGER.info("  Press P to toggle preview");
-        LOGGER.info("  Press [ ] to rotate schematic");
+        LOGGER.info("  Press O to list schematics");
+        LOGGER.info("  Press B to start building");
+        LOGGER.info("  Press N to stop building");
+        LOGGER.info("  Press , to pause/resume");
     }
 }
