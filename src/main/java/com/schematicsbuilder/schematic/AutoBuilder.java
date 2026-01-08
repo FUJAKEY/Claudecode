@@ -1,11 +1,10 @@
 package com.schematicsbuilder.schematic;
 
 import com.schematicsbuilder.SchematicsBuilderMod;
+import com.schematicsbuilder.util.PathfindingHelper;
 import net.minecraft.block.BlockState;
-import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.entity.player.ServerPlayerEntity;
 import net.minecraft.item.ItemStack;
-import net.minecraft.util.Hand;
 import net.minecraft.util.SoundCategory;
 import net.minecraft.util.SoundEvents;
 import net.minecraft.util.math.BlockPos;
@@ -17,6 +16,7 @@ import java.util.*;
 
 /**
  * Auto-Builder - Builds schematics layer by layer with AI optimization
+ * Now with resource chest support!
  */
 public class AutoBuilder {
 
@@ -36,6 +36,15 @@ public class AutoBuilder {
     private int blocksPerTick = 1;
     private int tickDelay = 2;
     private int tickCounter = 0;
+
+    // Resource fetching
+    private boolean fetchingResources = false;
+    private BlockPos returnPosition = null;
+    private BlockState neededBlock = null;
+    private BlockPos targetChest = null;
+    private int fetchTickCounter = 0;
+    private boolean atChest = false;
+    private boolean autoFetchEnabled = true;
 
     public AutoBuilder(ServerPlayerEntity player, SchematicData schematic) {
         this.player = player;
@@ -71,6 +80,8 @@ public class AutoBuilder {
         running = true;
         paused = false;
 
+        List<BlockPos> chests = ResourceChestManager.getLinkedChests(player.getUUID());
+
         player.displayClientMessage(
                 new StringTextComponent("═══════════════════════════════════")
                         .withStyle(TextFormatting.GREEN),
@@ -87,6 +98,17 @@ public class AutoBuilder {
                 new StringTextComponent("  Blocks: " + totalBlocks + " | Layers: " + maxLayer)
                         .withStyle(TextFormatting.GRAY),
                 false);
+        if (!chests.isEmpty()) {
+            player.displayClientMessage(
+                    new StringTextComponent("  📦 Resource Chests: " + chests.size() + " linked")
+                            .withStyle(TextFormatting.AQUA),
+                    false);
+        } else {
+            player.displayClientMessage(
+                    new StringTextComponent("  ⚠ No resource chests! Use /schem chest link")
+                            .withStyle(TextFormatting.YELLOW),
+                    false);
+        }
         player.displayClientMessage(
                 new StringTextComponent("═══════════════════════════════════")
                         .withStyle(TextFormatting.GREEN),
@@ -113,6 +135,7 @@ public class AutoBuilder {
     public void stop() {
         running = false;
         paused = false;
+        fetchingResources = false;
 
         player.displayClientMessage(
                 new StringTextComponent("⏹ Build Stopped! Placed " + blocksPlaced + "/" + totalBlocks + " blocks")
@@ -126,6 +149,12 @@ public class AutoBuilder {
     public boolean tick() {
         if (!running || paused)
             return running;
+
+        // If fetching resources, handle that first
+        if (fetchingResources) {
+            tickFetchResources();
+            return running;
+        }
 
         tickCounter++;
         if (tickCounter < tickDelay)
@@ -145,29 +174,35 @@ public class AutoBuilder {
 
             // Check if we can place this block
             if (canPlaceBlock(task)) {
-                placeBlock(task);
-                buildQueue.poll();
-                blocksPlaced++;
+                if (hasBlockInInventory(task.state)) {
+                    placeBlock(task);
+                    buildQueue.poll();
+                    blocksPlaced++;
 
-                // Update layer
-                if (task.layer > currentLayer) {
-                    currentLayer = task.layer;
-                    player.displayClientMessage(
-                            new StringTextComponent("📦 Layer " + (currentLayer + 1) + "/" + maxLayer + " | " +
-                                    getProgress() + "% complete")
-                                    .withStyle(TextFormatting.AQUA),
-                            true);
+                    // Update layer
+                    if (task.layer > currentLayer) {
+                        currentLayer = task.layer;
+                        player.displayClientMessage(
+                                new StringTextComponent("📦 Layer " + (currentLayer + 1) + "/" + maxLayer + " | " +
+                                        getProgress() + "% complete")
+                                        .withStyle(TextFormatting.AQUA),
+                                true);
+                    }
+                } else {
+                    // Try to fetch from chest
+                    if (autoFetchEnabled && tryStartFetch(task.state)) {
+                        return running;
+                    } else {
+                        // No chests or can't fetch - pause
+                        player.displayClientMessage(
+                                new StringTextComponent("⚠ Missing: " + task.state.getBlock().getName().getString())
+                                        .withStyle(TextFormatting.RED),
+                                true);
+                        paused = true;
+                        return running;
+                    }
                 }
             } else {
-                // Can't place - check inventory
-                if (!hasBlockInInventory(task.state)) {
-                    player.displayClientMessage(
-                            new StringTextComponent("⚠ Missing: " + task.state.getBlock().getName().getString())
-                                    .withStyle(TextFormatting.RED),
-                            true);
-                    paused = true;
-                    return running;
-                }
                 // Position blocked, skip for now
                 buildQueue.poll();
                 buildQueue.add(task);
@@ -175,6 +210,100 @@ public class AutoBuilder {
         }
 
         return running;
+    }
+
+    /**
+     * Try to start fetching resources from chest
+     */
+    private boolean tryStartFetch(BlockState needed) {
+        BlockPos chestPos = ResourceChestManager.findChestWithBlock(player, needed);
+
+        if (chestPos == null) {
+            return false; // No chest with this item
+        }
+
+        // Start fetching
+        fetchingResources = true;
+        neededBlock = needed;
+        targetChest = chestPos;
+        returnPosition = player.blockPosition();
+        atChest = false;
+        fetchTickCounter = 0;
+
+        player.displayClientMessage(
+                new StringTextComponent("🏃 Going to chest for: " + needed.getBlock().getName().getString())
+                        .withStyle(TextFormatting.AQUA),
+                true);
+
+        return true;
+    }
+
+    /**
+     * Handle resource fetching tick
+     */
+    private void tickFetchResources() {
+        fetchTickCounter++;
+
+        // Timeout after 30 seconds
+        if (fetchTickCounter > 600) {
+            player.displayClientMessage(
+                    new StringTextComponent("❌ Failed to reach chest! Pausing...")
+                            .withStyle(TextFormatting.RED),
+                    true);
+            fetchingResources = false;
+            paused = true;
+            return;
+        }
+
+        if (!atChest) {
+            // Move towards chest
+            BlockPos standPos = PathfindingHelper.findOpenSpotNear(world, targetChest);
+            boolean arrived = PathfindingHelper.moveTowards(player, standPos, 0.4);
+
+            if (arrived) {
+                atChest = true;
+                fetchTickCounter = 0;
+
+                player.displayClientMessage(
+                        new StringTextComponent("📦 At chest, grabbing items...")
+                                .withStyle(TextFormatting.GREEN),
+                        true);
+            }
+        } else {
+            // At chest - take items
+            // Wait a moment then take
+            if (fetchTickCounter > 20) {
+                int taken = ResourceChestManager.takeBlocksFromChest(
+                        player, targetChest, neededBlock, 64);
+
+                if (taken > 0) {
+                    player.displayClientMessage(
+                            new StringTextComponent("✓ Took " + taken + "x " +
+                                    neededBlock.getBlock().getName().getString())
+                                    .withStyle(TextFormatting.GREEN),
+                            true);
+
+                    world.playSound(null, player.getX(), player.getY(), player.getZ(),
+                            SoundEvents.ITEM_PICKUP, SoundCategory.PLAYERS, 1.0F, 1.0F);
+                }
+
+                // Now return to build position
+                player.displayClientMessage(
+                        new StringTextComponent("🏃 Returning to build site...")
+                                .withStyle(TextFormatting.AQUA),
+                        true);
+
+                // Simple teleport back (could make walking version later)
+                player.teleportTo(returnPosition.getX() + 0.5,
+                        returnPosition.getY(),
+                        returnPosition.getZ() + 0.5);
+
+                fetchingResources = false;
+                atChest = false;
+                neededBlock = null;
+                targetChest = null;
+            }
+        }
     }
 
     private boolean canPlaceBlock(BuildTask task) {
@@ -255,6 +384,10 @@ public class AutoBuilder {
         return paused;
     }
 
+    public boolean isFetching() {
+        return fetchingResources;
+    }
+
     public int getBlocksPlaced() {
         return blocksPlaced;
     }
@@ -269,6 +402,10 @@ public class AutoBuilder {
 
     public int getMaxLayer() {
         return maxLayer;
+    }
+
+    public void setAutoFetch(boolean enabled) {
+        this.autoFetchEnabled = enabled;
     }
 
     public void setSpeed(int blocksPerTick, int tickDelay) {

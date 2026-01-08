@@ -157,5 +157,6 @@ public class SchematicManager {
         if (builder != null) {
             builder.stop();
         }
+        ResourceChestManager.onPlayerDisconnect(playerId);
     }
 }

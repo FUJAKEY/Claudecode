@@ -2,13 +2,18 @@ package com.schematicsbuilder.commands;
 
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.StringArgumentType;
-import com.schematicsbuilder.network.LoadSchematicPacket;
 import com.schematicsbuilder.schematic.AutoBuilder;
+import com.schematicsbuilder.schematic.ResourceChestManager;
 import com.schematicsbuilder.schematic.SchematicData;
 import com.schematicsbuilder.schematic.SchematicManager;
 import net.minecraft.command.CommandSource;
 import net.minecraft.command.Commands;
 import net.minecraft.entity.player.ServerPlayerEntity;
+import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.BlockRayTraceResult;
+import net.minecraft.util.math.RayTraceContext;
+import net.minecraft.util.math.RayTraceResult;
+import net.minecraft.util.math.vector.Vector3d;
 import net.minecraft.util.text.StringTextComponent;
 import net.minecraft.util.text.TextFormatting;
 
@@ -16,7 +21,7 @@ import java.io.File;
 import java.util.List;
 
 /**
- * Commands for schematic operations
+ * Commands for schematic operations with chest support
  */
 public class SchematicCommands {
 
@@ -64,6 +69,28 @@ public class SchematicCommands {
                             showStatus(ctx.getSource());
                             return 1;
                         }))
+                // CHEST COMMANDS
+                .then(Commands.literal("chest")
+                        .then(Commands.literal("link")
+                                .executes(ctx -> {
+                                    linkChest(ctx.getSource());
+                                    return 1;
+                                }))
+                        .then(Commands.literal("unlink")
+                                .executes(ctx -> {
+                                    unlinkChest(ctx.getSource());
+                                    return 1;
+                                }))
+                        .then(Commands.literal("list")
+                                .executes(ctx -> {
+                                    listChests(ctx.getSource());
+                                    return 1;
+                                }))
+                        .then(Commands.literal("clear")
+                                .executes(ctx -> {
+                                    clearChests(ctx.getSource());
+                                    return 1;
+                                })))
                 .then(Commands.literal("help")
                         .executes(ctx -> {
                             showHelp(ctx.getSource());
@@ -161,7 +188,8 @@ public class SchematicCommands {
 
         AutoBuilder builder = SchematicManager.getBuilder(player.getUUID());
         if (builder != null && builder.isRunning()) {
-            source.sendSuccess(new StringTextComponent("Status: " + builder.getProgress() + "% | " +
+            String status = builder.isFetching() ? " (fetching)" : "";
+            source.sendSuccess(new StringTextComponent("Status: " + builder.getProgress() + "%" + status + " | " +
                     builder.getBlocksPlaced() + "/" + builder.getTotalBlocks() + " blocks | Layer " +
                     builder.getCurrentLayer() + "/" + builder.getMaxLayer())
                     .withStyle(TextFormatting.GREEN), false);
@@ -176,26 +204,112 @@ public class SchematicCommands {
                         .withStyle(TextFormatting.GRAY), false);
             }
         }
+
+        // Show chest info
+        List<BlockPos> chests = ResourceChestManager.getLinkedChests(player.getUUID());
+        if (!chests.isEmpty()) {
+            source.sendSuccess(new StringTextComponent("📦 Resource chests: " + chests.size() + " linked")
+                    .withStyle(TextFormatting.AQUA), false);
+        }
+    }
+
+    // ========== CHEST COMMANDS ==========
+
+    private static void linkChest(CommandSource source) {
+        if (!(source.getEntity() instanceof ServerPlayerEntity))
+            return;
+        ServerPlayerEntity player = (ServerPlayerEntity) source.getEntity();
+
+        // Raycast to find looked-at block
+        BlockPos target = getLookedAtBlock(player, 5.0);
+
+        if (target == null) {
+            source.sendFailure(new StringTextComponent("Look at a chest to link it!"));
+            return;
+        }
+
+        ResourceChestManager.linkChest(player, target);
+    }
+
+    private static void unlinkChest(CommandSource source) {
+        if (!(source.getEntity() instanceof ServerPlayerEntity))
+            return;
+        ServerPlayerEntity player = (ServerPlayerEntity) source.getEntity();
+
+        BlockPos target = getLookedAtBlock(player, 5.0);
+
+        if (target == null) {
+            source.sendFailure(new StringTextComponent("Look at a chest to unlink it!"));
+            return;
+        }
+
+        ResourceChestManager.unlinkChest(player, target);
+    }
+
+    private static void listChests(CommandSource source) {
+        if (!(source.getEntity() instanceof ServerPlayerEntity))
+            return;
+        ServerPlayerEntity player = (ServerPlayerEntity) source.getEntity();
+
+        ResourceChestManager.listChests(player);
+    }
+
+    private static void clearChests(CommandSource source) {
+        if (!(source.getEntity() instanceof ServerPlayerEntity))
+            return;
+        ServerPlayerEntity player = (ServerPlayerEntity) source.getEntity();
+
+        ResourceChestManager.clearAllChests(player);
+    }
+
+    /**
+     * Get block player is looking at
+     */
+    private static BlockPos getLookedAtBlock(ServerPlayerEntity player, double maxDistance) {
+        Vector3d eyePos = player.getEyePosition(1.0F);
+        Vector3d lookVec = player.getLookAngle();
+        Vector3d endPos = eyePos.add(lookVec.scale(maxDistance));
+
+        BlockRayTraceResult result = player.level.clip(new RayTraceContext(
+                eyePos, endPos,
+                RayTraceContext.BlockMode.OUTLINE,
+                RayTraceContext.FluidMode.NONE,
+                player));
+
+        if (result.getType() == RayTraceResult.Type.BLOCK) {
+            return result.getBlockPos();
+        }
+        return null;
     }
 
     private static void showHelp(CommandSource source) {
         source.sendSuccess(new StringTextComponent("═══ Schematic Builder Commands ═══")
                 .withStyle(TextFormatting.GOLD), false);
-        source.sendSuccess(new StringTextComponent("/schem list - List available schematics")
+        source.sendSuccess(new StringTextComponent("/schem list - List schematics")
                 .withStyle(TextFormatting.YELLOW), false);
-        source.sendSuccess(new StringTextComponent("/schem load <file> - Load a schematic")
+        source.sendSuccess(new StringTextComponent("/schem load <file> - Load schematic")
                 .withStyle(TextFormatting.YELLOW), false);
-        source.sendSuccess(new StringTextComponent("/schem pos - Set position to current location")
+        source.sendSuccess(new StringTextComponent("/schem pos - Set build position")
                 .withStyle(TextFormatting.YELLOW), false);
-        source.sendSuccess(new StringTextComponent("/schem rotate - Rotate 90 degrees")
+        source.sendSuccess(new StringTextComponent("/schem rotate - Rotate 90°")
                 .withStyle(TextFormatting.YELLOW), false);
-        source.sendSuccess(new StringTextComponent("/schem build - Start auto-building")
+        source.sendSuccess(new StringTextComponent("/schem build - Start building")
                 .withStyle(TextFormatting.YELLOW), false);
-        source.sendSuccess(new StringTextComponent("/schem pause - Pause/resume building")
+        source.sendSuccess(new StringTextComponent("/schem pause - Pause/resume")
                 .withStyle(TextFormatting.YELLOW), false);
         source.sendSuccess(new StringTextComponent("/schem stop - Stop building")
                 .withStyle(TextFormatting.YELLOW), false);
-        source.sendSuccess(new StringTextComponent("/schem status - Show current status")
+        source.sendSuccess(new StringTextComponent("")
+                .withStyle(TextFormatting.GRAY), false);
+        source.sendSuccess(new StringTextComponent("═══ Resource Chest Commands ═══")
+                .withStyle(TextFormatting.AQUA), false);
+        source.sendSuccess(new StringTextComponent("/schem chest link - Link looked-at chest")
+                .withStyle(TextFormatting.YELLOW), false);
+        source.sendSuccess(new StringTextComponent("/schem chest unlink - Unlink chest")
+                .withStyle(TextFormatting.YELLOW), false);
+        source.sendSuccess(new StringTextComponent("/schem chest list - List all chests")
+                .withStyle(TextFormatting.YELLOW), false);
+        source.sendSuccess(new StringTextComponent("/schem chest clear - Unlink all")
                 .withStyle(TextFormatting.YELLOW), false);
     }
 }
