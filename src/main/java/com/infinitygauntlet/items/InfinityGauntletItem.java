@@ -1,5 +1,6 @@
 package com.infinitygauntlet.items;
 
+import com.infinitygauntlet.events.InfinityHandler;
 import com.infinitygauntlet.init.ModItems;
 import net.minecraft.client.util.ITooltipFlag;
 import net.minecraft.entity.Entity;
@@ -49,14 +50,19 @@ public class InfinityGauntletItem extends Item {
         TextFormatting.DARK_PURPLE, TextFormatting.YELLOW, TextFormatting.GOLD
     };
     
+    // Sub-abilities for each stone
+    private static final String[][] STONE_ABILITIES = {
+        {"Teleport", "Warp Zone"},           // Space Stone
+        {"Time Freeze", "∞ INFINITY ∞"},     // Time Stone - GOJO SATORU
+        {"Transform", "Illusion"},            // Reality Stone
+        {"Power Wave", "Destruction"},        // Power Stone
+        {"Mind Control", "Telepathy"},        // Mind Stone
+        {"Life Steal", "Resurrection"}        // Soul Stone
+    };
+    
     // Cooldowns in ticks for each stone
     private static final int[] STONE_COOLDOWNS = {
-        40,  // Space - 2 seconds
-        100, // Time - 5 seconds
-        60,  // Reality - 3 seconds
-        80,  // Power - 4 seconds
-        120, // Mind - 6 seconds
-        60   // Soul - 3 seconds
+        40, 100, 60, 80, 120, 60
     };
 
     // Block transformations for Reality Stone
@@ -85,11 +91,53 @@ public class InfinityGauntletItem extends Item {
         ItemStack stack = player.getItemInHand(hand);
         CompoundNBT nbt = stack.getOrCreateTag();
         
+        // Ctrl (Sneak) + RMB: Switch sub-ability for current stone
+        if (player.isShiftKeyDown() && player.isCrouching()) {
+            int activeStone = nbt.getInt("active_stone");
+            if (nbt.getBoolean(STONE_KEYS[activeStone])) {
+                int subAbility = nbt.getInt("sub_ability_" + activeStone);
+                subAbility = (subAbility + 1) % 2; // Toggle between 0 and 1
+                nbt.putInt("sub_ability_" + activeStone, subAbility);
+                
+                // Special handling for Infinity toggle
+                if (activeStone == 1 && subAbility == 1) {
+                    // Activating Infinity
+                    nbt.putBoolean("infinity_active", true);
+                    if (!world.isClientSide) {
+                        player.displayClientMessage(
+                            new StringTextComponent("∞ INFINITY ACTIVATED ∞")
+                                .withStyle(TextFormatting.AQUA).withStyle(TextFormatting.BOLD), true);
+                        world.playSound(null, player.getX(), player.getY(), player.getZ(),
+                            SoundEvents.BEACON_POWER_SELECT, SoundCategory.PLAYERS, 1.0F, 0.5F);
+                        world.playSound(null, player.getX(), player.getY(), player.getZ(),
+                            SoundEvents.END_PORTAL_SPAWN, SoundCategory.PLAYERS, 0.5F, 2.0F);
+                    }
+                } else if (activeStone == 1) {
+                    // Deactivating Infinity
+                    nbt.putBoolean("infinity_active", false);
+                    if (!world.isClientSide) {
+                        player.displayClientMessage(
+                            new StringTextComponent("Infinity deactivated")
+                                .withStyle(TextFormatting.GRAY), true);
+                        world.playSound(null, player.getX(), player.getY(), player.getZ(),
+                            SoundEvents.BEACON_DEACTIVATE, SoundCategory.PLAYERS, 1.0F, 1.0F);
+                    }
+                }
+                
+                if (!world.isClientSide && activeStone != 1) {
+                    player.displayClientMessage(
+                        new StringTextComponent("◇ " + STONE_NAMES[activeStone] + " → " + STONE_ABILITIES[activeStone][subAbility])
+                            .withStyle(STONE_COLORS[activeStone]), true);
+                    world.playSound(null, player.getX(), player.getY(), player.getZ(),
+                        SoundEvents.EXPERIENCE_ORB_PICKUP, SoundCategory.PLAYERS, 0.5F, 1.5F);
+                }
+                return ActionResult.success(stack);
+            }
+        }
+        
         if (player.isShiftKeyDown()) {
             // Shift+RMB: Switch active stone
             int activeStone = nbt.getInt("active_stone");
-            
-            // Find next stone that is inserted
             int nextStone = activeStone;
             for (int i = 0; i < 6; i++) {
                 nextStone = (nextStone + 1) % 6;
@@ -101,8 +149,9 @@ public class InfinityGauntletItem extends Item {
             nbt.putInt("active_stone", nextStone);
             
             if (!world.isClientSide) {
+                int subAbility = nbt.getInt("sub_ability_" + nextStone);
                 player.displayClientMessage(
-                    new StringTextComponent("◆ " + STONE_NAMES[nextStone] + " ◆")
+                    new StringTextComponent("◆ " + STONE_NAMES[nextStone] + " [" + STONE_ABILITIES[nextStone][subAbility] + "]")
                         .withStyle(STONE_COLORS[nextStone]).withStyle(TextFormatting.BOLD), true);
                 world.playSound(null, player.getX(), player.getY(), player.getZ(),
                     SoundEvents.ENCHANTMENT_TABLE_USE, SoundCategory.PLAYERS, 0.5F, 1.5F);
@@ -126,7 +175,6 @@ public class InfinityGauntletItem extends Item {
         
         // Check if active stone is inserted
         if (!nbt.getBoolean(STONE_KEYS[activeStone])) {
-            // Find first available stone
             for (int i = 0; i < 6; i++) {
                 if (nbt.getBoolean(STONE_KEYS[i])) {
                     activeStone = i;
@@ -136,13 +184,22 @@ public class InfinityGauntletItem extends Item {
             }
         }
         
+        // If Infinity is active (Time Stone sub-ability), toggle it off on use
+        if (activeStone == 1 && nbt.getBoolean("infinity_active")) {
+            // Infinity is passive - just show message
+            if (!world.isClientSide) {
+                player.displayClientMessage(
+                    new StringTextComponent("∞ Infinity is ACTIVE - Nothing can touch you!")
+                        .withStyle(TextFormatting.AQUA), true);
+            }
+            return ActionResult.success(stack);
+        }
+        
         // Check cooldown
         String cooldownKey = "cooldown_" + STONE_KEYS[activeStone];
         long lastUse = nbt.getLong(cooldownKey);
         long currentTime = world.getGameTime();
         int cooldown = STONE_COOLDOWNS[activeStone];
-        
-        // Cooldown reduction based on stone count (more stones = faster cooldown)
         cooldown = cooldown - (stoneCount * 5);
         if (cooldown < 20) cooldown = 20;
         
@@ -157,13 +214,10 @@ public class InfinityGauntletItem extends Item {
         }
 
         if (!world.isClientSide) {
-            // Check for SNAP (all 6 stones)
+            // Check for SNAP (all 6 stones + double click)
             if (stoneCount == 6) {
                 long lastSnap = nbt.getLong("last_snap");
-                if (currentTime - lastSnap >= 6000) { // 5 minute cooldown for snap
-                    // Special key combo for snap: all stones + sneaking was already tried
-                    // So we just use regular ability, but player can hold for snap
-                    // Actually let's make snap require all stones + double right click
+                if (currentTime - lastSnap >= 6000) {
                     int clickCount = nbt.getInt("click_count");
                     long lastClick = nbt.getLong("last_click");
                     
@@ -183,14 +237,13 @@ public class InfinityGauntletItem extends Item {
                 }
             }
             
-            // Calculate power multiplier based on stone count
             float powerMultiplier = 1.0F + (stoneCount * 0.2F);
+            int subAbility = nbt.getInt("sub_ability_" + activeStone);
             
-            // Use active stone ability
-            useStoneAbility(world, player, activeStone, powerMultiplier);
+            // Use active stone ability with sub-ability
+            useStoneAbility(world, player, activeStone, subAbility, powerMultiplier);
             nbt.putLong(cooldownKey, currentTime);
             
-            // XP cost
             if (player.totalExperience > 0 && !player.isCreative()) {
                 player.giveExperiencePoints(-5 * stoneCount);
             }
@@ -208,16 +261,36 @@ public class InfinityGauntletItem extends Item {
         return count;
     }
     
-    private void useStoneAbility(World world, PlayerEntity player, int stoneIndex, float powerMultiplier) {
+    private void useStoneAbility(World world, PlayerEntity player, int stoneIndex, int subAbility, float powerMultiplier) {
         switch (stoneIndex) {
-            case 0: useSpaceStone(world, player, powerMultiplier); break;
-            case 1: useTimeStone(world, player, powerMultiplier); break;
-            case 2: useRealityStone(world, player, powerMultiplier); break;
-            case 3: usePowerStone(world, player, powerMultiplier); break;
-            case 4: useMindStone(world, player, powerMultiplier); break;
-            case 5: useSoulStone(world, player, powerMultiplier); break;
+            case 0: 
+                if (subAbility == 0) useSpaceStone(world, player, powerMultiplier);
+                else useSpaceStoneWarp(world, player, powerMultiplier);
+                break;
+            case 1: 
+                if (subAbility == 0) useTimeStone(world, player, powerMultiplier);
+                // Sub-ability 1 is Infinity - handled passively
+                break;
+            case 2: 
+                if (subAbility == 0) useRealityStone(world, player, powerMultiplier);
+                else useRealityStoneIllusion(world, player, powerMultiplier);
+                break;
+            case 3: 
+                if (subAbility == 0) usePowerStone(world, player, powerMultiplier);
+                else usePowerStoneDestruction(world, player, powerMultiplier);
+                break;
+            case 4: 
+                if (subAbility == 0) useMindStone(world, player, powerMultiplier);
+                else useMindStoneTelepath(world, player, powerMultiplier);
+                break;
+            case 5: 
+                if (subAbility == 0) useSoulStone(world, player, powerMultiplier);
+                else useSoulStoneResurrect(world, player, powerMultiplier);
+                break;
         }
     }
+    
+    // ==================== SPACE STONE ====================
     
     private void useSpaceStone(World world, PlayerEntity player, float power) {
         double distance = 50 * power;
@@ -230,92 +303,76 @@ public class InfinityGauntletItem extends Item {
             RayTraceContext.FluidMode.NONE, player));
         
         BlockPos teleportPos = result.getBlockPos().relative(result.getDirection());
-        
-        // Store old position for particles
-        double oldX = player.getX();
-        double oldY = player.getY();
-        double oldZ = player.getZ();
+        double oldX = player.getX(), oldY = player.getY(), oldZ = player.getZ();
         
         player.teleportTo(teleportPos.getX() + 0.5, teleportPos.getY(), teleportPos.getZ() + 0.5);
         
-        // Sound effects
-        world.playSound(null, oldX, oldY, oldZ,
-            SoundEvents.ENDERMAN_TELEPORT, SoundCategory.PLAYERS, 1.0F, 0.5F);
-        world.playSound(null, player.getX(), player.getY(), player.getZ(),
-            SoundEvents.ENDERMAN_TELEPORT, SoundCategory.PLAYERS, 1.0F, 1.5F);
+        world.playSound(null, oldX, oldY, oldZ, SoundEvents.ENDERMAN_TELEPORT, SoundCategory.PLAYERS, 1.0F, 0.5F);
+        world.playSound(null, player.getX(), player.getY(), player.getZ(), SoundEvents.ENDERMAN_TELEPORT, SoundCategory.PLAYERS, 1.0F, 1.5F);
         
         if (world instanceof ServerWorld) {
             ServerWorld sw = (ServerWorld) world;
-            // Portal particles at old location
-            sw.sendParticles(ParticleTypes.REVERSE_PORTAL,
-                oldX, oldY + 1, oldZ, 100, 0.5, 1, 0.5, 0.1);
-            // Portal particles at new location
-            sw.sendParticles(ParticleTypes.PORTAL,
-                player.getX(), player.getY() + 1, player.getZ(), 100, 0.5, 1, 0.5, 0.5);
-            // Line of particles between locations
-            Vector3d diff = new Vector3d(player.getX() - oldX, player.getY() - oldY, player.getZ() - oldZ);
-            double len = diff.length();
-            for (int i = 0; i < len; i += 2) {
-                double t = i / len;
-                sw.sendParticles(ParticleTypes.DRAGON_BREATH,
-                    oldX + diff.x * t, oldY + 1 + diff.y * t, oldZ + diff.z * t,
-                    3, 0.1, 0.1, 0.1, 0.01);
+            sw.sendParticles(ParticleTypes.REVERSE_PORTAL, oldX, oldY + 1, oldZ, 100, 0.5, 1, 0.5, 0.1);
+            sw.sendParticles(ParticleTypes.PORTAL, player.getX(), player.getY() + 1, player.getZ(), 100, 0.5, 1, 0.5, 0.5);
+        }
+        
+        player.displayClientMessage(new StringTextComponent("⬡ Teleported!").withStyle(TextFormatting.BLUE), true);
+    }
+    
+    private void useSpaceStoneWarp(World world, PlayerEntity player, float power) {
+        // Warp Zone - teleport all nearby entities to random locations
+        AxisAlignedBB area = player.getBoundingBox().inflate(10 * power);
+        List<LivingEntity> entities = world.getEntitiesOfClass(LivingEntity.class, area, e -> e != player);
+        
+        Random rand = new Random();
+        for (LivingEntity entity : entities) {
+            double newX = entity.getX() + (rand.nextDouble() - 0.5) * 20;
+            double newZ = entity.getZ() + (rand.nextDouble() - 0.5) * 20;
+            entity.teleportTo(newX, entity.getY(), newZ);
+            
+            if (world instanceof ServerWorld) {
+                ((ServerWorld) world).sendParticles(ParticleTypes.PORTAL, entity.getX(), entity.getY() + 1, entity.getZ(), 30, 0.5, 1, 0.5, 0.3);
             }
         }
         
-        player.displayClientMessage(
-            new StringTextComponent("⬡ Teleported " + (int)result.distanceTo(player) + " blocks!")
-                .withStyle(TextFormatting.BLUE), true);
+        world.playSound(null, player.getX(), player.getY(), player.getZ(), SoundEvents.ENDERMAN_TELEPORT, SoundCategory.PLAYERS, 1.5F, 0.3F);
+        player.displayClientMessage(new StringTextComponent("⬡ Warped " + entities.size() + " entities!").withStyle(TextFormatting.BLUE), true);
     }
+    
+    // ==================== TIME STONE ====================
     
     private void useTimeStone(World world, PlayerEntity player, float power) {
         int radius = (int)(15 * power);
         int duration = (int)(200 * power);
         
         AxisAlignedBB area = player.getBoundingBox().inflate(radius);
-        List<LivingEntity> entities = world.getEntitiesOfClass(LivingEntity.class, area,
-            e -> e != player);
+        List<LivingEntity> entities = world.getEntitiesOfClass(LivingEntity.class, area, e -> e != player);
         
         int affected = 0;
         for (LivingEntity entity : entities) {
-            // Freeze effect: extreme slowness + no jump + weakness
             entity.addEffect(new EffectInstance(Effects.MOVEMENT_SLOWDOWN, duration, 10));
             entity.addEffect(new EffectInstance(Effects.DIG_SLOWDOWN, duration, 5));
             entity.addEffect(new EffectInstance(Effects.WEAKNESS, duration, 4));
-            entity.addEffect(new EffectInstance(Effects.JUMP, duration, 128)); // Can't jump
-            
-            // Stop their movement
             entity.setDeltaMovement(0, entity.getDeltaMovement().y, 0);
-            
-            if (world instanceof ServerWorld) {
-                ((ServerWorld) world).sendParticles(ParticleTypes.END_ROD,
-                    entity.getX(), entity.getY() + 1, entity.getZ(), 20, 0.3, 0.5, 0.3, 0.02);
-            }
             affected++;
         }
         
-        // Player gets speed boost (time moves faster for you)
         player.addEffect(new EffectInstance(Effects.MOVEMENT_SPEED, duration / 2, 2));
-        player.addEffect(new EffectInstance(Effects.DIG_SPEED, duration / 2, 2));
         
         if (world instanceof ServerWorld) {
-            // Time vortex effect
             for (int i = 0; i < 360; i += 15) {
                 double angle = Math.toRadians(i);
                 double x = player.getX() + Math.cos(angle) * 3;
                 double z = player.getZ() + Math.sin(angle) * 3;
-                ((ServerWorld) world).sendParticles(ParticleTypes.END_ROD,
-                    x, player.getY() + 1, z, 5, 0.1, 0.3, 0.1, 0.01);
+                ((ServerWorld) world).sendParticles(ParticleTypes.END_ROD, x, player.getY() + 1, z, 5, 0.1, 0.3, 0.1, 0.01);
             }
         }
         
-        world.playSound(null, player.getX(), player.getY(), player.getZ(),
-            SoundEvents.BEACON_ACTIVATE, SoundCategory.PLAYERS, 1.0F, 2.0F);
-        
-        player.displayClientMessage(
-            new StringTextComponent("⏱ Time frozen! " + affected + " entities affected for " + (duration/20) + "s")
-                .withStyle(TextFormatting.GREEN), true);
+        world.playSound(null, player.getX(), player.getY(), player.getZ(), SoundEvents.BEACON_ACTIVATE, SoundCategory.PLAYERS, 1.0F, 2.0F);
+        player.displayClientMessage(new StringTextComponent("⏱ Time frozen! " + affected + " affected").withStyle(TextFormatting.GREEN), true);
     }
+    
+    // ==================== REALITY STONE ====================
     
     private void useRealityStone(World world, PlayerEntity player, float power) {
         int radius = (int)(5 * power);
@@ -331,12 +388,6 @@ public class InfinityGauntletItem extends Item {
                     if (REALITY_TRANSFORMS.containsKey(currentBlock)) {
                         Block newBlock = REALITY_TRANSFORMS.get(currentBlock);
                         world.setBlock(pos, newBlock.defaultBlockState(), 3);
-                        
-                        if (world instanceof ServerWorld && transformed < 50) {
-                            ((ServerWorld) world).sendParticles(ParticleTypes.CRIMSON_SPORE,
-                                pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5, 
-                                5, 0.3, 0.3, 0.3, 0.05);
-                        }
                         transformed++;
                     }
                 }
@@ -344,77 +395,90 @@ public class InfinityGauntletItem extends Item {
         }
         
         if (world instanceof ServerWorld) {
-            ((ServerWorld) world).sendParticles(ParticleTypes.CRIMSON_SPORE,
-                player.getX(), player.getY() + 1, player.getZ(), 200, radius, 3, radius, 0.1);
+            ((ServerWorld) world).sendParticles(ParticleTypes.CRIMSON_SPORE, player.getX(), player.getY() + 1, player.getZ(), 200, radius, 3, radius, 0.1);
         }
         
-        world.playSound(null, player.getX(), player.getY(), player.getZ(),
-            SoundEvents.ENCHANTMENT_TABLE_USE, SoundCategory.PLAYERS, 1.0F, 0.5F);
-        
-        player.displayClientMessage(
-            new StringTextComponent("✦ Reality warped! " + transformed + " blocks transformed")
-                .withStyle(TextFormatting.RED), true);
+        world.playSound(null, player.getX(), player.getY(), player.getZ(), SoundEvents.ENCHANTMENT_TABLE_USE, SoundCategory.PLAYERS, 1.0F, 0.5F);
+        player.displayClientMessage(new StringTextComponent("✦ " + transformed + " blocks transformed").withStyle(TextFormatting.RED), true);
     }
+    
+    private void useRealityStoneIllusion(World world, PlayerEntity player, float power) {
+        // Make player invisible and create confusion
+        player.addEffect(new EffectInstance(Effects.INVISIBILITY, (int)(200 * power), 0));
+        
+        AxisAlignedBB area = player.getBoundingBox().inflate(15);
+        List<MobEntity> mobs = world.getEntitiesOfClass(MobEntity.class, area);
+        
+        for (MobEntity mob : mobs) {
+            mob.setTarget(null);
+            mob.addEffect(new EffectInstance(Effects.BLINDNESS, (int)(100 * power), 0));
+        }
+        
+        if (world instanceof ServerWorld) {
+            ((ServerWorld) world).sendParticles(ParticleTypes.SMOKE, player.getX(), player.getY() + 1, player.getZ(), 100, 1, 1, 1, 0.1);
+        }
+        
+        world.playSound(null, player.getX(), player.getY(), player.getZ(), SoundEvents.ILLUSIONER_CAST_SPELL, SoundCategory.PLAYERS, 1.0F, 1.0F);
+        player.displayClientMessage(new StringTextComponent("✦ Illusion active! You are invisible").withStyle(TextFormatting.RED), true);
+    }
+    
+    // ==================== POWER STONE ====================
     
     private void usePowerStone(World world, PlayerEntity player, float power) {
         float damage = 20.0F * power;
         int radius = (int)(10 * power);
         
         AxisAlignedBB area = player.getBoundingBox().inflate(radius);
-        List<LivingEntity> entities = world.getEntitiesOfClass(LivingEntity.class, area,
-            e -> e != player);
+        List<LivingEntity> entities = world.getEntitiesOfClass(LivingEntity.class, area, e -> e != player);
         
         int hit = 0;
         for (LivingEntity entity : entities) {
-            // Knockback away from player
             Vector3d knockback = entity.position().subtract(player.position()).normalize().scale(3 * power);
             entity.setDeltaMovement(knockback.x, 0.7, knockback.z);
             entity.hurtMarked = true;
-            
-            // Damage
             entity.hurt(DamageSource.playerAttack(player).setMagic(), damage);
-            
-            // Fire for extra damage
             entity.setSecondsOnFire((int)(5 * power));
-            
-            if (world instanceof ServerWorld) {
-                ((ServerWorld) world).sendParticles(ParticleTypes.EXPLOSION,
-                    entity.getX(), entity.getY() + 1, entity.getZ(), 3, 0.3, 0.3, 0.3, 0);
-            }
             hit++;
         }
         
-        // Destroy weak blocks nearby
+        if (world instanceof ServerWorld) {
+            ServerWorld sw = (ServerWorld) world;
+            sw.sendParticles(ParticleTypes.EXPLOSION_EMITTER, player.getX(), player.getY() + 1, player.getZ(), 3, 0, 0, 0, 0);
+            sw.sendParticles(ParticleTypes.SOUL_FIRE_FLAME, player.getX(), player.getY() + 1, player.getZ(), 100, radius/2, 2, radius/2, 0.2);
+        }
+        
+        world.playSound(null, player.getX(), player.getY(), player.getZ(), SoundEvents.GENERIC_EXPLODE, SoundCategory.PLAYERS, 2.0F, 0.5F);
+        player.displayClientMessage(new StringTextComponent("☠ " + hit + " hit for " + (int)damage + " damage!").withStyle(TextFormatting.DARK_PURPLE), true);
+    }
+    
+    private void usePowerStoneDestruction(World world, PlayerEntity player, float power) {
+        // Destroy ALL blocks in radius (except bedrock)
+        int radius = (int)(5 * power);
         BlockPos playerPos = player.blockPosition();
-        for (int x = -3; x <= 3; x++) {
-            for (int y = -1; y <= 2; y++) {
-                for (int z = -3; z <= 3; z++) {
+        int destroyed = 0;
+        
+        for (int x = -radius; x <= radius; x++) {
+            for (int y = -radius; y <= radius; y++) {
+                for (int z = -radius; z <= radius; z++) {
                     BlockPos pos = playerPos.offset(x, y, z);
-                    if (world.getBlockState(pos).getDestroySpeed(world, pos) < 1.0F &&
-                        world.getBlockState(pos).getDestroySpeed(world, pos) > 0) {
+                    if (world.getBlockState(pos).getDestroySpeed(world, pos) >= 0 && 
+                        world.getBlockState(pos).getBlock() != Blocks.BEDROCK) {
                         world.destroyBlock(pos, true);
+                        destroyed++;
                     }
                 }
             }
         }
         
         if (world instanceof ServerWorld) {
-            ServerWorld sw = (ServerWorld) world;
-            sw.sendParticles(ParticleTypes.EXPLOSION_EMITTER,
-                player.getX(), player.getY() + 1, player.getZ(), 3, 0, 0, 0, 0);
-            sw.sendParticles(ParticleTypes.SOUL_FIRE_FLAME,
-                player.getX(), player.getY() + 1, player.getZ(), 100, radius/2, 2, radius/2, 0.2);
+            ((ServerWorld) world).sendParticles(ParticleTypes.EXPLOSION_EMITTER, player.getX(), player.getY(), player.getZ(), 10, radius, radius, radius, 0);
         }
         
-        world.playSound(null, player.getX(), player.getY(), player.getZ(),
-            SoundEvents.GENERIC_EXPLODE, SoundCategory.PLAYERS, 2.0F, 0.5F);
-        world.playSound(null, player.getX(), player.getY(), player.getZ(),
-            SoundEvents.WITHER_BREAK_BLOCK, SoundCategory.PLAYERS, 1.0F, 1.0F);
-        
-        player.displayClientMessage(
-            new StringTextComponent("☠ Power unleashed! " + hit + " entities hit for " + (int)damage + " damage!")
-                .withStyle(TextFormatting.DARK_PURPLE), true);
+        world.playSound(null, player.getX(), player.getY(), player.getZ(), SoundEvents.WITHER_BREAK_BLOCK, SoundCategory.PLAYERS, 2.0F, 0.5F);
+        player.displayClientMessage(new StringTextComponent("☠ DESTRUCTION! " + destroyed + " blocks obliterated").withStyle(TextFormatting.DARK_PURPLE), true);
     }
+    
+    // ==================== MIND STONE ====================
     
     private void useMindStone(World world, PlayerEntity player, float power) {
         int radius = (int)(20 * power);
@@ -425,127 +489,116 @@ public class InfinityGauntletItem extends Item {
         
         int controlled = 0;
         for (MobEntity mob : entities) {
-            // Clear target
             mob.setTarget(null);
             mob.setLastHurtByMob(null);
-            
-            // Apply effects
             mob.addEffect(new EffectInstance(Effects.GLOWING, duration, 0));
-            mob.addEffect(new EffectInstance(Effects.DAMAGE_RESISTANCE, duration, 2));
-            
-            // Make peaceful towards player
-            mob.setNoAi(false);
-            
-            // Navigate to player
             mob.getNavigation().moveTo(player.getX(), player.getY(), player.getZ(), 1.2);
-            
-            if (world instanceof ServerWorld) {
-                ((ServerWorld) world).sendParticles(ParticleTypes.ENCHANT,
-                    mob.getX(), mob.getY() + mob.getBbHeight() + 0.5, mob.getZ(), 
-                    15, 0.3, 0.3, 0.3, 0.5);
-            }
             controlled++;
         }
         
-        // Give player enhanced awareness
         player.addEffect(new EffectInstance(Effects.NIGHT_VISION, duration, 0));
         
         if (world instanceof ServerWorld) {
-            // Mind wave effect
-            for (int ring = 1; ring <= 3; ring++) {
-                for (int i = 0; i < 360; i += 10) {
-                    double angle = Math.toRadians(i);
-                    double x = player.getX() + Math.cos(angle) * ring * 3;
-                    double z = player.getZ() + Math.sin(angle) * ring * 3;
-                    ((ServerWorld) world).sendParticles(ParticleTypes.ENCHANT,
-                        x, player.getY() + 1, z, 3, 0.1, 0.2, 0.1, 0.3);
-                }
-            }
+            ((ServerWorld) world).sendParticles(ParticleTypes.ENCHANT, player.getX(), player.getY() + 2, player.getZ(), 100, 5, 2, 5, 0.5);
         }
         
-        world.playSound(null, player.getX(), player.getY(), player.getZ(),
-            SoundEvents.BEACON_POWER_SELECT, SoundCategory.PLAYERS, 1.0F, 1.5F);
-        
-        player.displayClientMessage(
-            new StringTextComponent("◉ " + controlled + " minds controlled! They will follow you for " + (duration/20) + "s")
-                .withStyle(TextFormatting.YELLOW), true);
+        world.playSound(null, player.getX(), player.getY(), player.getZ(), SoundEvents.BEACON_POWER_SELECT, SoundCategory.PLAYERS, 1.0F, 1.5F);
+        player.displayClientMessage(new StringTextComponent("◉ " + controlled + " minds controlled!").withStyle(TextFormatting.YELLOW), true);
     }
+    
+    private void useMindStoneTelepath(World world, PlayerEntity player, float power) {
+        // See through walls + reveal all entities
+        player.addEffect(new EffectInstance(Effects.NIGHT_VISION, (int)(600 * power), 0));
+        
+        AxisAlignedBB area = player.getBoundingBox().inflate(50);
+        List<LivingEntity> entities = world.getEntitiesOfClass(LivingEntity.class, area, e -> e != player);
+        
+        for (LivingEntity entity : entities) {
+            entity.addEffect(new EffectInstance(Effects.GLOWING, (int)(300 * power), 0));
+        }
+        
+        if (world instanceof ServerWorld) {
+            ((ServerWorld) world).sendParticles(ParticleTypes.ENCHANT, player.getX(), player.getY() + 2, player.getZ(), 200, 25, 10, 25, 0.5);
+        }
+        
+        world.playSound(null, player.getX(), player.getY(), player.getZ(), SoundEvents.BEACON_AMBIENT, SoundCategory.PLAYERS, 1.0F, 2.0F);
+        player.displayClientMessage(new StringTextComponent("◉ Telepathy active! " + entities.size() + " entities revealed").withStyle(TextFormatting.YELLOW), true);
+    }
+    
+    // ==================== SOUL STONE ====================
     
     private void useSoulStone(World world, PlayerEntity player, float power) {
         int duration = (int)(400 * power);
         int healAmount = (int)(10 * power);
         
-        // Heal player significantly
         player.heal(healAmount);
-        
-        // Powerful buffs
         player.addEffect(new EffectInstance(Effects.REGENERATION, duration, 3));
         player.addEffect(new EffectInstance(Effects.ABSORPTION, duration, 4));
         player.addEffect(new EffectInstance(Effects.DAMAGE_BOOST, duration, 2));
-        player.addEffect(new EffectInstance(Effects.DAMAGE_RESISTANCE, duration / 2, 1));
         player.addEffect(new EffectInstance(Effects.FIRE_RESISTANCE, duration, 0));
         
-        // Life steal from nearby enemies
         AxisAlignedBB area = player.getBoundingBox().inflate(8 * power);
-        List<LivingEntity> entities = world.getEntitiesOfClass(LivingEntity.class, area,
-            e -> e != player && !(e instanceof PlayerEntity));
+        List<LivingEntity> entities = world.getEntitiesOfClass(LivingEntity.class, area, e -> e != player && !(e instanceof PlayerEntity));
         
         int drained = 0;
         for (LivingEntity entity : entities) {
             float drain = Math.min(entity.getHealth(), 4.0F * power);
             entity.hurt(DamageSource.MAGIC, drain);
             player.heal(drain / 2);
-            
-            if (world instanceof ServerWorld) {
-                // Soul drain effect - particles from entity to player
-                Vector3d diff = player.position().subtract(entity.position());
-                for (int i = 0; i < 5; i++) {
-                    double t = i / 5.0;
-                    ((ServerWorld) world).sendParticles(ParticleTypes.SOUL,
-                        entity.getX() + diff.x * t, 
-                        entity.getY() + 1 + diff.y * t, 
-                        entity.getZ() + diff.z * t,
-                        2, 0.1, 0.1, 0.1, 0.02);
-                }
-            }
             drained++;
         }
         
         if (world instanceof ServerWorld) {
-            ((ServerWorld) world).sendParticles(ParticleTypes.SOUL_FIRE_FLAME,
-                player.getX(), player.getY() + 1, player.getZ(), 50, 1, 1, 1, 0.1);
-            ((ServerWorld) world).sendParticles(ParticleTypes.SOUL,
-                player.getX(), player.getY() + 1.5, player.getZ(), 30, 0.5, 0.5, 0.5, 0.1);
+            ((ServerWorld) world).sendParticles(ParticleTypes.SOUL_FIRE_FLAME, player.getX(), player.getY() + 1, player.getZ(), 50, 1, 1, 1, 0.1);
         }
         
-        world.playSound(null, player.getX(), player.getY(), player.getZ(),
-            SoundEvents.SOUL_ESCAPE, SoundCategory.PLAYERS, 1.0F, 1.0F);
-        world.playSound(null, player.getX(), player.getY(), player.getZ(),
-            SoundEvents.TOTEM_USE, SoundCategory.PLAYERS, 0.5F, 1.5F);
-        
-        player.displayClientMessage(
-            new StringTextComponent("❤ Healed " + healAmount + " HP! Drained " + drained + " souls!")
-                .withStyle(TextFormatting.GOLD), true);
+        world.playSound(null, player.getX(), player.getY(), player.getZ(), SoundEvents.TOTEM_USE, SoundCategory.PLAYERS, 0.5F, 1.5F);
+        player.displayClientMessage(new StringTextComponent("❤ Healed " + healAmount + "! Drained " + drained + " souls").withStyle(TextFormatting.GOLD), true);
     }
+    
+    private void useSoulStoneResurrect(World world, PlayerEntity player, float power) {
+        // Full heal + remove all negative effects + temporary god mode
+        player.setHealth(player.getMaxHealth());
+        player.getFoodData().setFoodLevel(20);
+        
+        // Remove negative effects
+        player.removeEffect(Effects.POISON);
+        player.removeEffect(Effects.WITHER);
+        player.removeEffect(Effects.HUNGER);
+        player.removeEffect(Effects.WEAKNESS);
+        player.removeEffect(Effects.MOVEMENT_SLOWDOWN);
+        player.removeEffect(Effects.BLINDNESS);
+        
+        // Powerful buffs
+        int duration = (int)(200 * power);
+        player.addEffect(new EffectInstance(Effects.REGENERATION, duration, 4));
+        player.addEffect(new EffectInstance(Effects.DAMAGE_RESISTANCE, duration, 3));
+        player.addEffect(new EffectInstance(Effects.ABSORPTION, duration, 5));
+        player.addEffect(new EffectInstance(Effects.FIRE_RESISTANCE, duration, 0));
+        
+        if (world instanceof ServerWorld) {
+            ((ServerWorld) world).sendParticles(ParticleTypes.TOTEM_OF_UNDYING, player.getX(), player.getY() + 1, player.getZ(), 100, 1, 2, 1, 0.5);
+            ((ServerWorld) world).sendParticles(ParticleTypes.SOUL, player.getX(), player.getY() + 1, player.getZ(), 50, 1, 1, 1, 0.1);
+        }
+        
+        world.playSound(null, player.getX(), player.getY(), player.getZ(), SoundEvents.TOTEM_USE, SoundCategory.PLAYERS, 1.0F, 1.0F);
+        player.displayClientMessage(new StringTextComponent("❤ RESURRECTION! Full restoration").withStyle(TextFormatting.GOLD).withStyle(TextFormatting.BOLD), true);
+    }
+    
+    // ==================== SNAP ====================
     
     private void performSnap(World world, PlayerEntity player) {
         if (world instanceof ServerWorld) {
             ServerWorld sw = (ServerWorld) world;
             
-            // Get all living entities in huge radius
-            List<LivingEntity> allEntities = sw.getEntitiesOfClass(
-                LivingEntity.class, 
-                player.getBoundingBox().inflate(150),
-                e -> e != player && !(e instanceof PlayerEntity)
-            );
+            List<LivingEntity> allEntities = sw.getEntitiesOfClass(LivingEntity.class, 
+                player.getBoundingBox().inflate(150), e -> e != player && !(e instanceof PlayerEntity));
             
-            // Kill 50% randomly with dramatic effect
             Random random = new Random();
             int killed = 0;
             
             for (LivingEntity entity : allEntities) {
                 if (random.nextBoolean()) {
-                    // Dust effect before removal
                     for (int i = 0; i < 20; i++) {
                         sw.sendParticles(ParticleTypes.ASH,
                             entity.getX() + random.nextDouble() - 0.5,
@@ -553,63 +606,24 @@ public class InfinityGauntletItem extends Item {
                             entity.getZ() + random.nextDouble() - 0.5,
                             5, 0.2, 0.2, 0.2, 0.05);
                     }
-                    sw.sendParticles(ParticleTypes.SMOKE,
-                        entity.getX(), entity.getY() + entity.getBbHeight() / 2, entity.getZ(), 
-                        30, 0.5, 0.5, 0.5, 0.1);
-                    
                     entity.remove();
                     killed++;
                 }
             }
             
-            // EPIC visual effects
-            // Flash
-            sw.sendParticles(ParticleTypes.FLASH,
-                player.getX(), player.getY() + 10, player.getZ(), 10, 5, 5, 5, 0);
+            sw.sendParticles(ParticleTypes.FLASH, player.getX(), player.getY() + 10, player.getZ(), 10, 5, 5, 5, 0);
+            sw.sendParticles(ParticleTypes.SOUL, player.getX(), player.getY() + 2, player.getZ(), 500, 30, 10, 30, 0.5);
             
-            // Multiple expanding rings
-            for (int ring = 0; ring < 50; ring += 5) {
-                for (int i = 0; i < 360; i += 5) {
-                    double angle = Math.toRadians(i);
-                    double x = player.getX() + Math.cos(angle) * ring;
-                    double z = player.getZ() + Math.sin(angle) * ring;
-                    sw.sendParticles(ParticleTypes.END_ROD, x, player.getY() + 1, z, 1, 0, 0, 0, 0);
-                }
-            }
+            world.playSound(null, player.getX(), player.getY(), player.getZ(), SoundEvents.END_PORTAL_SPAWN, SoundCategory.PLAYERS, 3.0F, 0.3F);
+            world.playSound(null, player.getX(), player.getY(), player.getZ(), SoundEvents.LIGHTNING_BOLT_THUNDER, SoundCategory.PLAYERS, 3.0F, 0.5F);
             
-            // Soul particles
-            sw.sendParticles(ParticleTypes.SOUL,
-                player.getX(), player.getY() + 2, player.getZ(), 500, 30, 10, 30, 0.5);
+            player.displayClientMessage(new StringTextComponent("★ SNAP ★ " + killed + " erased!")
+                .withStyle(TextFormatting.LIGHT_PURPLE).withStyle(TextFormatting.BOLD), true);
             
-            // Dragon breath
-            sw.sendParticles(ParticleTypes.DRAGON_BREATH,
-                player.getX(), player.getY() + 1, player.getZ(), 200, 20, 5, 20, 0.2);
-            
-            // Sounds
-            world.playSound(null, player.getX(), player.getY(), player.getZ(),
-                SoundEvents.END_PORTAL_SPAWN, SoundCategory.PLAYERS, 3.0F, 0.3F);
-            world.playSound(null, player.getX(), player.getY(), player.getZ(),
-                SoundEvents.WITHER_DEATH, SoundCategory.PLAYERS, 2.0F, 0.5F);
-            world.playSound(null, player.getX(), player.getY(), player.getZ(),
-                SoundEvents.LIGHTNING_BOLT_THUNDER, SoundCategory.PLAYERS, 3.0F, 0.5F);
-            
-            // Message
-            player.displayClientMessage(
-                new StringTextComponent("")
-                    .append(new StringTextComponent("★ ").withStyle(TextFormatting.LIGHT_PURPLE))
-                    .append(new StringTextComponent("S N A P").withStyle(TextFormatting.WHITE).withStyle(TextFormatting.BOLD))
-                    .append(new StringTextComponent(" ★").withStyle(TextFormatting.LIGHT_PURPLE))
-                    .append(new StringTextComponent(" " + killed + " entities erased!").withStyle(TextFormatting.GRAY)),
-                true);
-            
-            // Damage player for using snap (balanced)
             player.hurt(DamageSource.MAGIC, 20.0F);
-            player.addEffect(new EffectInstance(Effects.MOVEMENT_SLOWDOWN, 100, 2));
-            player.addEffect(new EffectInstance(Effects.WEAKNESS, 200, 1));
         }
     }
     
-    // Passive effects when holding gauntlet
     @Override
     public void inventoryTick(ItemStack stack, World world, Entity entity, int slot, boolean isSelected) {
         if (entity instanceof PlayerEntity && isSelected) {
@@ -617,8 +631,8 @@ public class InfinityGauntletItem extends Item {
             CompoundNBT nbt = stack.getOrCreateTag();
             int stoneCount = countStones(nbt);
             
+            // Apply passive effects
             if (stoneCount > 0 && world.getGameTime() % 20 == 0) {
-                // Passive effects based on stones
                 if (nbt.getBoolean("space_stone")) {
                     player.addEffect(new EffectInstance(Effects.MOVEMENT_SPEED, 25, 0, false, false));
                 }
@@ -628,7 +642,7 @@ public class InfinityGauntletItem extends Item {
                 if (nbt.getBoolean("soul_stone")) {
                     player.addEffect(new EffectInstance(Effects.REGENERATION, 25, 0, false, false));
                 }
-                if (nbt.getBoolean("reality_stone") && !world.isClientSide) {
+                if (nbt.getBoolean("reality_stone")) {
                     player.addEffect(new EffectInstance(Effects.LUCK, 25, 0, false, false));
                 }
                 if (nbt.getBoolean("mind_stone")) {
@@ -642,8 +656,13 @@ public class InfinityGauntletItem extends Item {
             // Particles when holding
             if (stoneCount > 0 && world instanceof ServerWorld && world.getGameTime() % 5 == 0) {
                 ((ServerWorld) world).sendParticles(ParticleTypes.END_ROD,
-                    player.getX(), player.getY() + 0.8, player.getZ(), 
-                    stoneCount, 0.3, 0.2, 0.3, 0.01);
+                    player.getX(), player.getY() + 0.8, player.getZ(), stoneCount, 0.3, 0.2, 0.3, 0.01);
+            }
+            
+            // Infinity visual effect
+            if (nbt.getBoolean("infinity_active") && world instanceof ServerWorld && world.getGameTime() % 3 == 0) {
+                ((ServerWorld) world).sendParticles(ParticleTypes.END_ROD,
+                    player.getX(), player.getY() + 1, player.getZ(), 10, 2, 1, 2, 0.01);
             }
         }
     }
@@ -660,7 +679,19 @@ public class InfinityGauntletItem extends Item {
             boolean hasStone = nbt.getBoolean(STONE_KEYS[i]);
             String status = hasStone ? "✓ " : "✗ ";
             TextFormatting color = hasStone ? STONE_COLORS[i] : TextFormatting.DARK_GRAY;
-            tooltip.add(new StringTextComponent("  " + status + STONE_NAMES[i]).withStyle(color));
+            
+            if (hasStone) {
+                int subAbility = nbt.getInt("sub_ability_" + i);
+                tooltip.add(new StringTextComponent("  " + status + STONE_NAMES[i] + " [" + STONE_ABILITIES[i][subAbility] + "]").withStyle(color));
+            } else {
+                tooltip.add(new StringTextComponent("  " + status + STONE_NAMES[i]).withStyle(color));
+            }
+        }
+        
+        if (nbt.getBoolean("infinity_active")) {
+            tooltip.add(new StringTextComponent(""));
+            tooltip.add(new StringTextComponent("∞ INFINITY ACTIVE ∞").withStyle(TextFormatting.AQUA).withStyle(TextFormatting.BOLD));
+            tooltip.add(new StringTextComponent("Nothing can touch you!").withStyle(TextFormatting.GRAY));
         }
         
         tooltip.add(new StringTextComponent(""));
@@ -668,23 +699,23 @@ public class InfinityGauntletItem extends Item {
         if (stoneCount == 6) {
             tooltip.add(new StringTextComponent("★ ALL STONES COLLECTED ★")
                 .withStyle(TextFormatting.LIGHT_PURPLE).withStyle(TextFormatting.BOLD));
-            tooltip.add(new StringTextComponent("Double right-click to SNAP!")
+            tooltip.add(new StringTextComponent("Double RMB to SNAP!")
                 .withStyle(TextFormatting.RED).withStyle(TextFormatting.ITALIC));
         } else if (stoneCount > 0) {
-            tooltip.add(new StringTextComponent("Power: " + (100 + stoneCount * 20) + "%")
-                .withStyle(TextFormatting.AQUA));
+            tooltip.add(new StringTextComponent("Power: " + (100 + stoneCount * 20) + "%").withStyle(TextFormatting.AQUA));
         }
         
         int activeStone = nbt.getInt("active_stone");
         if (stoneCount > 0 && nbt.getBoolean(STONE_KEYS[activeStone])) {
+            int subAbility = nbt.getInt("sub_ability_" + activeStone);
             tooltip.add(new StringTextComponent(""));
-            tooltip.add(new StringTextComponent("▶ Active: " + STONE_NAMES[activeStone])
+            tooltip.add(new StringTextComponent("▶ " + STONE_NAMES[activeStone] + " → " + STONE_ABILITIES[activeStone][subAbility])
                 .withStyle(STONE_COLORS[activeStone]).withStyle(TextFormatting.BOLD));
         }
         
         tooltip.add(new StringTextComponent(""));
         tooltip.add(new StringTextComponent("Shift+RMB: Switch stone").withStyle(TextFormatting.DARK_GRAY));
-        tooltip.add(new StringTextComponent("RMB: Use ability").withStyle(TextFormatting.DARK_GRAY));
+        tooltip.add(new StringTextComponent("Crouch+Shift+RMB: Switch ability").withStyle(TextFormatting.DARK_GRAY));
     }
     
     @Override
