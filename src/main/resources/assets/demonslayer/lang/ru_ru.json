@@ -32,5 +32,11 @@
     "entity.demonslayer.kokushibo": "Кокушибо (Верхняя Луна 1)",
     "effect.demonslayer.total_concentration": "Полная Концентрация",
     "effect.demonslayer.demon_power": "Сила Демона",
-    "itemGroup.demonslayer": "Клинок рассекающий демонов"
+    "itemGroup.demonslayer": "Клинок рассекающий демонов",
+    "key.category.demonslayer": "Клинок рассекающий демонов",
+    "key.demonslayer.switch_form_forward": "Сменить форму (вперёд)",
+    "key.demonslayer.switch_form_backward": "Сменить форму (назад)",
+    "key.demonslayer.activate_mark": "Активировать метку",
+    "key.demonslayer.open_quest_menu": "Меню квестов",
+    "key.demonslayer.show_stats": "Показать статистику"
 }

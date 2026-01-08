@@ -32,5 +32,11 @@
     "entity.demonslayer.kokushibo": "Kokushibo (Upper Moon 1)",
     "effect.demonslayer.total_concentration": "Total Concentration",
     "effect.demonslayer.demon_power": "Demon Power",
-    "itemGroup.demonslayer": "Demon Slayer"
+    "itemGroup.demonslayer": "Demon Slayer",
+    "key.category.demonslayer": "Demon Slayer",
+    "key.demonslayer.switch_form_forward": "Switch Form (Forward)",
+    "key.demonslayer.switch_form_backward": "Switch Form (Backward)",
+    "key.demonslayer.activate_mark": "Activate Slayer Mark",
+    "key.demonslayer.open_quest_menu": "Quest Menu",
+    "key.demonslayer.show_stats": "Show Stats"
 }
