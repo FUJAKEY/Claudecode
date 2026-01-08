@@ -1,6 +1,7 @@
 package com.schematicsbuilder.client;
 
 import com.schematicsbuilder.SchematicsBuilderMod;
+import com.schematicsbuilder.client.gui.SchematicMenuScreen;
 import com.schematicsbuilder.schematic.SchematicData;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.ChestBlock;
@@ -60,9 +61,14 @@ public class ClientEventHandler {
 
         ClientAutoBuilder builder = ClientAutoBuilder.getInstance();
 
-        // O - List/Open menu
+        // O - Open GUI Menu
         if (ModKeyBindings.OPEN_MENU.consumeClick()) {
-            listSchematics();
+            mc.setScreen(new SchematicMenuScreen());
+        }
+
+        // P - Toggle Preview
+        if (ModKeyBindings.TOGGLE_PREVIEW != null && ModKeyBindings.TOGGLE_PREVIEW.consumeClick()) {
+            SchematicPreviewRenderer.togglePreview();
         }
 
         // B - Start build
@@ -87,33 +93,6 @@ public class ClientEventHandler {
                 data.rotate90();
                 sendMessage("§b⟳ Rotated to " + data.getRotation() + "°");
             }
-        }
-    }
-
-    /**
-     * List available schematics
-     */
-    private static void listSchematics() {
-        File folder = SchematicsBuilderMod.schematicsFolder;
-        if (folder == null || !folder.exists()) {
-            sendMessage("§cSchematics folder not found!");
-            return;
-        }
-
-        File[] files = folder.listFiles(
-                (dir, name) -> name.endsWith(".schematic") || name.endsWith(".schem") || name.endsWith(".litematic"));
-
-        sendMessage("§6═══ Available Schematics ═══");
-
-        if (files == null || files.length == 0) {
-            sendMessage("§cNo schematics found!");
-            sendMessage("§7Put files in: " + folder.getAbsolutePath());
-        } else {
-            for (File f : files) {
-                long kb = f.length() / 1024;
-                sendMessage("§e • " + f.getName() + " §7(" + kb + " KB)");
-            }
-            sendMessage("§7Use: /schem load <filename>");
         }
     }
 

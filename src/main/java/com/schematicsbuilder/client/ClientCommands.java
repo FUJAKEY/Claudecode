@@ -1,6 +1,7 @@
 package com.schematicsbuilder.client;
 
 import com.schematicsbuilder.SchematicsBuilderMod;
+import com.schematicsbuilder.client.gui.SchematicMenuScreen;
 import com.schematicsbuilder.schematic.SchematicData;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
@@ -94,10 +95,36 @@ public class ClientCommands {
                 try {
                     int delay = Integer.parseInt(parts[2]);
                     ClientAutoBuilder.getInstance().setSpeed(delay);
-                    sendMessage("§aSpeed set to " + delay + " ticks per block");
                 } catch (NumberFormatException e) {
                     sendMessage("§cInvalid number");
                 }
+                return true;
+
+            case "antidetect":
+            case "ad":
+                if (parts.length < 3) {
+                    sendMessage("§cUsage: /schem antidetect <off|light|normal|paranoid>");
+                    return true;
+                }
+                ClientAutoBuilder.getInstance().setAntiDetection(parts[2]);
+                return true;
+
+            case "materials":
+            case "mat":
+                showMaterials();
+                return true;
+
+            case "missing":
+                showMissing();
+                return true;
+
+            case "preview":
+                SchematicPreviewRenderer.togglePreview();
+                return true;
+
+            case "menu":
+            case "gui":
+                mc.setScreen(new SchematicMenuScreen());
                 return true;
 
             case "help":
@@ -127,7 +154,8 @@ public class ClientCommands {
             sendMessage("§7Put files in: " + folder.getAbsolutePath());
         } else {
             for (File f : files) {
-                sendMessage("§e • " + f.getName());
+                long kb = f.length() / 1024;
+                sendMessage("§e • " + f.getName() + " §7(" + kb + " KB)");
             }
         }
     }
@@ -187,17 +215,50 @@ public class ClientCommands {
     private static void showStatus() {
         ClientAutoBuilder builder = ClientAutoBuilder.getInstance();
 
+        sendMessage("§6═══ Build Status ═══");
+
         if (builder.isRunning()) {
-            String status = builder.isPaused() ? " (paused)" : "";
-            sendMessage("§aBuilding" + status + ": " + builder.getProgress() + "% | " +
-                    builder.getBlocksPlaced() + "/" + builder.getTotalBlocks());
+            String status = builder.isPaused() ? "§ePAUSED" : "§aRUNNING";
+            sendMessage("§7Status: " + status);
+            sendMessage("§7Progress: §e" + builder.getProgress() + "% §7(" +
+                    builder.getBlocksPlaced() + "/" + builder.getTotalBlocks() + ")");
+            sendMessage("§7Layer: §e" + (builder.getCurrentLayer() + 1) + "/" + builder.getMaxLayer());
         } else {
             SchematicData data = builder.getSchematic();
             if (data != null) {
-                sendMessage("§eLoaded: " + data.getName() + " at " + data.getOrigin().toShortString());
+                sendMessage("§7Loaded: §e" + data.getName());
+                sendMessage("§7Position: §e" + data.getOrigin().toShortString());
+                sendMessage("§7Rotation: §e" + data.getRotation() + "°");
+                sendMessage("§7Size: §e" + data.getWidth() + "x" + data.getHeight() + "x" + data.getLength());
+
+                int mat = MaterialCalculator.getMaterialPercentage(data);
+                String matColor = mat == 100 ? "§a" : (mat > 50 ? "§e" : "§c");
+                sendMessage("§7Materials: " + matColor + mat + "%");
             } else {
                 sendMessage("§7No schematic loaded");
+                sendMessage("§7Use: /schem load <file>");
             }
+        }
+
+        sendMessage("§7" + AntiDetection.getSettingsString());
+        sendMessage("§7Preview: " + (SchematicPreviewRenderer.isPreviewEnabled() ? "§aON" : "§cOFF"));
+    }
+
+    private static void showMaterials() {
+        SchematicData data = ClientAutoBuilder.getInstance().getSchematic();
+        if (data != null) {
+            MaterialCalculator.showMaterials(data);
+        } else {
+            sendMessage("§cNo schematic loaded!");
+        }
+    }
+
+    private static void showMissing() {
+        SchematicData data = ClientAutoBuilder.getInstance().getSchematic();
+        if (data != null) {
+            MaterialCalculator.showMissing(data);
+        } else {
+            sendMessage("§cNo schematic loaded!");
         }
     }
 
@@ -241,20 +302,29 @@ public class ClientCommands {
     }
 
     private static void showHelp() {
-        sendMessage("§6═══ Schematic Builder (Client-Side) ═══");
+        sendMessage("§6═══ Schematics Builder v3.0 ═══");
+        sendMessage("§a§lBasic Commands:");
+        sendMessage("§e/schem menu §7- Open GUI menu");
         sendMessage("§e/schem list §7- List schematics");
         sendMessage("§e/schem load <file> §7- Load schematic");
         sendMessage("§e/schem pos §7- Set build position");
         sendMessage("§e/schem rotate §7- Rotate 90°");
-        sendMessage("§e/schem build §7- Start building");
+        sendMessage("§e/schem preview §7- Toggle preview");
+        sendMessage("§a§lBuilding:");
+        sendMessage("§e/schem build §7- Start");
         sendMessage("§e/schem pause §7- Pause/resume");
         sendMessage("§e/schem stop §7- Stop");
-        sendMessage("§e/schem speed <ticks> §7- Set speed (1-20)");
-        sendMessage("§b═══ Chest Commands ═══");
-        sendMessage("§e/schem chest link §7- Link chest");
-        sendMessage("§e/schem chest list §7- List chests");
-        sendMessage("§e/schem chest clear §7- Unlink all");
-        sendMessage("§7Works on ANY server - no server mod needed!");
+        sendMessage("§e/schem status §7- Show status");
+        sendMessage("§a§lMaterials:");
+        sendMessage("§e/schem materials §7- Show required");
+        sendMessage("§e/schem missing §7- Show missing");
+        sendMessage("§a§lChests:");
+        sendMessage("§e/schem chest link/list/clear");
+        sendMessage("§a§lAnti-Detection:");
+        sendMessage("§e/schem antidetect <off|light|normal|paranoid>");
+        sendMessage("§e/schem speed <ticks> §7- Set delay");
+        sendMessage("§7─────────────────────────────");
+        sendMessage("§a✓ Works on ANY server!");
     }
 
     private static void sendMessage(String msg) {

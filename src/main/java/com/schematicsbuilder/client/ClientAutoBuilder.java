@@ -19,8 +19,9 @@ import net.minecraft.util.text.TextFormatting;
 import java.util.*;
 
 /**
- * CLIENT-SIDE Auto Builder
+ * CLIENT-SIDE Auto Builder v3.0
  * Works on ANY server - simulates real player actions
+ * Now with anti-detection and smart pathfinding!
  */
 public class ClientAutoBuilder {
 
@@ -38,15 +39,21 @@ public class ClientAutoBuilder {
     private int blocksPlaced = 0;
     private int totalBlocks = 0;
 
-    // Timing
+    // Timing with anti-detection
     private int tickCounter = 0;
-    private int placeDelay = 2; // ticks between placements (adjustable)
+    private int currentDelay = 2;
 
-    // Movement
+    // Break simulation
+    private boolean takingBreak = false;
+    private int breakTicksRemaining = 0;
+
+    // Movement with pathfinding
     private boolean movingToChest = false;
     private BlockPos targetChest = null;
     private BlockPos returnPos = null;
     private BlockState neededBlock = null;
+    private List<BlockPos> currentPath = new ArrayList<>();
+    private int pathIndex = 0;
 
     // Linked chests (client-side storage)
     private List<BlockPos> linkedChests = new ArrayList<>();
@@ -80,6 +87,7 @@ public class ClientAutoBuilder {
         this.currentLayer = 0;
 
         sendMessage("§a✓ Loaded: §e" + data.getName() + " §7(" + totalBlocks + " blocks, " + maxLayer + " layers)");
+        sendMessage("§7" + AntiDetection.getSettingsString());
     }
 
     /**
@@ -87,13 +95,18 @@ public class ClientAutoBuilder {
      */
     public void start() {
         if (schematic == null) {
-            sendMessage("§cNo schematic loaded! Use /schem load <file>");
+            sendMessage("§cNo schematic loaded! Use /schem load <file> or press O for menu");
             return;
         }
 
         if (running) {
             sendMessage("§eAlready building!");
             return;
+        }
+
+        // Reload queue if empty but have schematic
+        if (buildQueue.isEmpty() && schematic != null) {
+            loadSchematic(schematic);
         }
 
         running = true;
@@ -106,6 +119,7 @@ public class ClientAutoBuilder {
         if (!linkedChests.isEmpty()) {
             sendMessage("§b  📦 Resource Chests: " + linkedChests.size() + " linked");
         }
+        sendMessage("§7  " + AntiDetection.getSettingsString());
         sendMessage("§a═══════════════════════════════════");
     }
 
@@ -116,6 +130,8 @@ public class ClientAutoBuilder {
         running = false;
         paused = false;
         movingToChest = false;
+        takingBreak = false;
+        currentPath.clear();
         sendMessage("§c⏹ Build Stopped! Placed " + blocksPlaced + "/" + totalBlocks);
     }
 
@@ -136,17 +152,40 @@ public class ClientAutoBuilder {
         if (mc.player == null || mc.level == null)
             return;
 
+        // Taking a break (anti-detection)
+        if (takingBreak) {
+            breakTicksRemaining--;
+            if (breakTicksRemaining <= 0) {
+                takingBreak = false;
+            }
+            return;
+        }
+
+        // Random break chance
+        if (AntiDetection.shouldTakeBreak()) {
+            takingBreak = true;
+            breakTicksRemaining = AntiDetection.getBreakDuration();
+            return;
+        }
+
         // Handle movement to chest
         if (movingToChest) {
             tickMovingToChest();
             return;
         }
 
-        // Delay between placements
+        // Delay between placements (with randomization)
         tickCounter++;
-        if (tickCounter < placeDelay)
+        if (tickCounter < currentDelay)
             return;
         tickCounter = 0;
+        currentDelay = AntiDetection.getRandomDelay();
+
+        // Misclick simulation
+        if (AntiDetection.shouldMisclick()) {
+            mc.player.swing(Hand.MAIN_HAND);
+            return;
+        }
 
         // Process build queue
         if (buildQueue.isEmpty()) {
@@ -189,7 +228,8 @@ public class ClientAutoBuilder {
             }
 
             // Can't find block anywhere
-            sendMessage("§c⚠ Missing: " + task.state.getBlock().getName().getString() + " - pausing");
+            sendMessage("§c⚠ Missing: " + task.state.getBlock().getName().getString());
+            sendMessage("§7Add to hotbar or link a chest with /schem chest link");
             paused = true;
             return;
         }
@@ -247,7 +287,7 @@ public class ClientAutoBuilder {
     }
 
     /**
-     * Place block using client actions
+     * Place block using client actions with anti-detection
      */
     private boolean placeBlock(BlockPos pos, BlockState targetState) {
         // Find a face to place against
@@ -256,11 +296,13 @@ public class ClientAutoBuilder {
             BlockState neighborState = mc.level.getBlockState(neighbor);
 
             if (!neighborState.isAir()) {
-                // Create ray trace result
+                // Randomized hit position (anti-detection)
+                float offset = AntiDetection.getRandomOffset();
+
                 Vector3d hitVec = new Vector3d(
-                        pos.getX() + 0.5 + dir.getStepX() * 0.5,
-                        pos.getY() + 0.5 + dir.getStepY() * 0.5,
-                        pos.getZ() + 0.5 + dir.getStepZ() * 0.5);
+                        neighbor.getX() + offset,
+                        neighbor.getY() + offset,
+                        neighbor.getZ() + offset);
 
                 BlockRayTraceResult rayTrace = new BlockRayTraceResult(
                         hitVec, dir.getOpposite(), neighbor, false);
@@ -277,7 +319,7 @@ public class ClientAutoBuilder {
         return false;
     }
 
-    // ========== CHEST OPERATIONS ==========
+    // ========== CHEST OPERATIONS WITH PATHFINDING ==========
 
     public void linkChest(BlockPos pos) {
         if (linkedChests.contains(pos)) {
@@ -299,7 +341,8 @@ public class ClientAutoBuilder {
     public void listChests() {
         sendMessage("§6═══ Linked Chests (" + linkedChests.size() + ") ═══");
         if (linkedChests.isEmpty()) {
-            sendMessage("§cNo chests linked! Look at chest and use /schem chest link");
+            sendMessage("§cNo chests linked!");
+            sendMessage("§7Look at chest and use /schem chest link");
         } else {
             for (int i = 0; i < linkedChests.size(); i++) {
                 BlockPos pos = linkedChests.get(i);
@@ -315,8 +358,6 @@ public class ClientAutoBuilder {
     }
 
     private BlockPos findChestWithBlock(BlockState needed) {
-        // For client-side, we just return closest chest
-        // Player will need to manually check contents
         if (linkedChests.isEmpty())
             return null;
 
@@ -340,6 +381,10 @@ public class ClientAutoBuilder {
         neededBlock = needed;
         returnPos = mc.player.blockPosition();
 
+        // Calculate path using A*
+        currentPath = SmartPathfinder.findPath(mc.level, mc.player.blockPosition(), chest);
+        pathIndex = 0;
+
         sendActionBar("§b🏃 Going to chest for: " + needed.getBlock().getName().getString());
     }
 
@@ -354,18 +399,31 @@ public class ClientAutoBuilder {
 
         // Close enough to chest
         if (dist < 9) { // 3 blocks
-            sendMessage("§a📦 At chest! Get the items and press B to resume");
+            sendMessage("§a📦 At chest! Get §e" + neededBlock.getBlock().getName().getString());
+            sendMessage("§7Press §eB§7 to resume after getting items");
             movingToChest = false;
             paused = true;
+            currentPath.clear();
             return;
         }
 
-        // Move towards chest
-        moveTowards(targetChest);
+        // Follow path
+        if (!currentPath.isEmpty() && pathIndex < currentPath.size()) {
+            BlockPos nextWaypoint = currentPath.get(pathIndex);
+
+            if (player.blockPosition().distSqr(nextWaypoint) < 1) {
+                pathIndex++;
+            } else {
+                moveTowards(nextWaypoint);
+            }
+        } else {
+            // Fallback to direct movement
+            moveTowards(targetChest);
+        }
     }
 
     /**
-     * Simulate movement towards target
+     * Simulate movement towards target with anti-detection
      */
     private void moveTowards(BlockPos target) {
         ClientPlayerEntity player = mc.player;
@@ -380,8 +438,9 @@ public class ClientAutoBuilder {
             dx /= dist;
             dz /= dist;
 
-            // Set player input (simulates pressing W)
-            player.input.forwardImpulse = 1.0f;
+            // Randomized movement speed (anti-detection)
+            float speed = AntiDetection.getMovementSpeed();
+            player.input.forwardImpulse = speed;
             player.input.leftImpulse = 0.0f;
 
             // Face target
@@ -400,6 +459,8 @@ public class ClientAutoBuilder {
 
     private void complete() {
         running = false;
+        long seconds = blocksPlaced / 20; // Rough estimate
+
         sendMessage("§a═══════════════════════════════════");
         sendMessage("§a§l  ✓ BUILD COMPLETE!");
         sendMessage("§e  Placed " + blocksPlaced + " blocks");
@@ -430,12 +491,26 @@ public class ClientAutoBuilder {
         return totalBlocks;
     }
 
+    public int getCurrentLayer() {
+        return currentLayer;
+    }
+
+    public int getMaxLayer() {
+        return maxLayer;
+    }
+
     public SchematicData getSchematic() {
         return schematic;
     }
 
     public void setSpeed(int delay) {
-        this.placeDelay = Math.max(1, delay);
+        AntiDetection.setBaseDelay(delay);
+        sendMessage("§aSpeed set to " + delay + " ticks base delay");
+    }
+
+    public void setAntiDetection(String preset) {
+        AntiDetection.setPreset(preset);
+        sendMessage("§a" + AntiDetection.getSettingsString());
     }
 
     private void sendMessage(String msg) {
