@@ -76,17 +76,21 @@ public class ClientAutoBuilder {
         this.schematic = data;
         this.buildQueue.clear();
 
-        // Pre-calculate all build tasks
-        for (int y = 0; y < data.getHeight(); y++) {
+        // Get actual Y range from blocks (handles negative offsets in litematic)
+        int minY = data.getMinY();
+        int maxY = data.getMaxY();
+
+        // Pre-calculate all build tasks using actual Y range
+        for (int y = minY; y <= maxY; y++) {
             List<Map.Entry<BlockPos, BlockState>> layerBlocks = data.getBlocksAtLayer(y);
             for (Map.Entry<BlockPos, BlockState> entry : layerBlocks) {
                 BlockPos worldPos = data.toWorldPos(entry.getKey());
-                buildQueue.add(new BuildTask(worldPos, entry.getValue(), y));
+                buildQueue.add(new BuildTask(worldPos, entry.getValue(), y - minY));
             }
         }
 
         this.totalBlocks = buildQueue.size();
-        this.maxLayer = data.getHeight();
+        this.maxLayer = maxY - minY + 1;
         this.blocksPlaced = 0;
         this.currentLayer = 0;
         this.skipCount = 0;

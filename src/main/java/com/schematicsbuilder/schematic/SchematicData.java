@@ -78,6 +78,105 @@ public class SchematicData {
     }
 
     /**
+     * Get minimum Y coordinate among all blocks in schematic
+     */
+    public int getMinY() {
+        if (blocks.isEmpty())
+            return 0;
+        int minY = Integer.MAX_VALUE;
+        for (BlockPos pos : blocks.keySet()) {
+            if (pos.getY() < minY) {
+                minY = pos.getY();
+            }
+        }
+        return minY;
+    }
+
+    /**
+     * Get maximum Y coordinate among all blocks in schematic
+     */
+    public int getMaxY() {
+        if (blocks.isEmpty())
+            return 0;
+        int maxY = Integer.MIN_VALUE;
+        for (BlockPos pos : blocks.keySet()) {
+            if (pos.getY() > maxY) {
+                maxY = pos.getY();
+            }
+        }
+        return maxY;
+    }
+
+    /**
+     * Get actual height based on block positions (maxY - minY + 1)
+     */
+    public int getActualHeight() {
+        if (blocks.isEmpty())
+            return 0;
+        return getMaxY() - getMinY() + 1;
+    }
+
+    /**
+     * Get minimum X coordinate among all blocks
+     */
+    public int getMinX() {
+        if (blocks.isEmpty())
+            return 0;
+        int minX = Integer.MAX_VALUE;
+        for (BlockPos pos : blocks.keySet()) {
+            if (pos.getX() < minX) {
+                minX = pos.getX();
+            }
+        }
+        return minX;
+    }
+
+    /**
+     * Get maximum X coordinate among all blocks
+     */
+    public int getMaxX() {
+        if (blocks.isEmpty())
+            return 0;
+        int maxX = Integer.MIN_VALUE;
+        for (BlockPos pos : blocks.keySet()) {
+            if (pos.getX() > maxX) {
+                maxX = pos.getX();
+            }
+        }
+        return maxX;
+    }
+
+    /**
+     * Get minimum Z coordinate among all blocks
+     */
+    public int getMinZ() {
+        if (blocks.isEmpty())
+            return 0;
+        int minZ = Integer.MAX_VALUE;
+        for (BlockPos pos : blocks.keySet()) {
+            if (pos.getZ() < minZ) {
+                minZ = pos.getZ();
+            }
+        }
+        return minZ;
+    }
+
+    /**
+     * Get maximum Z coordinate among all blocks
+     */
+    public int getMaxZ() {
+        if (blocks.isEmpty())
+            return 0;
+        int maxZ = Integer.MIN_VALUE;
+        for (BlockPos pos : blocks.keySet()) {
+            if (pos.getZ() > maxZ) {
+                maxZ = pos.getZ();
+            }
+        }
+        return maxZ;
+    }
+
+    /**
      * Get blocks for a specific Y layer (for layer-by-layer building)
      */
     public List<Map.Entry<BlockPos, BlockState>> getBlocksAtLayer(int y) {

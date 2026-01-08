@@ -305,10 +305,16 @@ public class SchematicPreviewRenderer {
     }
 
     private static void renderBoundingBox(MatrixStack matrixStack, SchematicData schematic) {
+        // Use actual block ranges for accurate bounding box
         BlockPos origin = schematic.getOrigin();
-        int w = schematic.getWidth();
-        int h = schematic.getHeight();
-        int l = schematic.getLength();
+
+        // Calculate world-space bounds from actual block positions
+        int minX = schematic.getMinX();
+        int maxX = schematic.getMaxX();
+        int minY = schematic.getMinY();
+        int maxY = schematic.getMaxY();
+        int minZ = schematic.getMinZ();
+        int maxZ = schematic.getMaxZ();
 
         RenderSystem.lineWidth(3.0f); // Thicker line
         RenderSystem.disableTexture();
@@ -321,12 +327,13 @@ public class SchematicPreviewRenderer {
 
         Matrix4f matrix = matrixStack.last().pose();
 
-        float x1 = origin.getX();
-        float y1 = origin.getY();
-        float z1 = origin.getZ();
-        float x2 = x1 + w;
-        float y2 = y1 + h;
-        float z2 = z1 + l;
+        // Transform to world coordinates using origin
+        float x1 = origin.getX() + minX;
+        float y1 = origin.getY() + minY;
+        float z1 = origin.getZ() + minZ;
+        float x2 = origin.getX() + maxX + 1;
+        float y2 = origin.getY() + maxY + 1;
+        float z2 = origin.getZ() + maxZ + 1;
 
         float r = 1.0f, g = 0.5f, b = 0.0f, a = 1.0f; // Orange
 
