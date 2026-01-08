@@ -1,0 +1,16 @@
+{
+    "type": "minecraft:crafting_shaped",
+    "pattern": [
+        "VVV",
+        "VVV",
+        " V "
+    ],
+    "key": {
+        "V": {
+            "item": "infinitygauntlet:vibranium_ingot"
+        }
+    },
+    "result": {
+        "item": "infinitygauntlet:vibranium_shield"
+    }
+}

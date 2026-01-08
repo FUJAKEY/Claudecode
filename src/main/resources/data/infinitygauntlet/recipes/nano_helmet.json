@@ -1,0 +1,19 @@
+{
+    "type": "minecraft:crafting_shaped",
+    "pattern": [
+        "VNV",
+        "VNV",
+        "VNV"
+    ],
+    "key": {
+        "V": {
+            "item": "infinitygauntlet:vibranium_ingot"
+        },
+        "N": {
+            "item": "minecraft:netherite_ingot"
+        }
+    },
+    "result": {
+        "item": "infinitygauntlet:nano_helmet"
+    }
+}

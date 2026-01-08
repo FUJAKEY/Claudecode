@@ -1,0 +1,6 @@
+{
+    "parent": "item/handheld",
+    "textures": {
+        "layer0": "infinitygauntlet:item/thanos_sword"
+    }
+}

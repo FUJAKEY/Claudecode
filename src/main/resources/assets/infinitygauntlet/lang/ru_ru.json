@@ -9,6 +9,12 @@
     "item.infinitygauntlet.vibranium_ingot": "Вибраниумный слиток",
     "item.infinitygauntlet.vibranium_nugget": "Кусочек вибраниума",
     "item.infinitygauntlet.gauntlet_core": "Ядро перчатки",
+    "item.infinitygauntlet.thanos_sword": "Двойной меч Таноса",
+    "item.infinitygauntlet.vibranium_shield": "Вибраниумный щит",
+    "item.infinitygauntlet.nano_helmet": "Нано-шлем",
+    "item.infinitygauntlet.nano_chestplate": "Нано-нагрудник",
+    "item.infinitygauntlet.nano_leggings": "Нано-поножи",
+    "item.infinitygauntlet.nano_boots": "Нано-ботинки",
     "block.infinitygauntlet.vibranium_ore": "Вибраниумная руда",
     "block.infinitygauntlet.vibranium_block": "Блок вибраниума",
     "entity.infinitygauntlet.thanos": "Танос",
@@ -18,5 +24,13 @@
     "key.infinitygauntlet.switch_stone": "Сменить камень",
     "key.infinitygauntlet.switch_sub_ability": "Сменить подспособность",
     "key.infinitygauntlet.combo_ability": "Комбо-способность",
-    "key.infinitygauntlet.toggle_infinity": "Вкл/Выкл Бесконечность"
+    "key.infinitygauntlet.toggle_infinity": "Вкл/Выкл Бесконечность",
+    "advancement.infinitygauntlet.root": "Безграничная сила",
+    "advancement.infinitygauntlet.root.desc": "Получите Перчатку Бесконечности",
+    "advancement.infinitygauntlet.first_stone": "Первый камень",
+    "advancement.infinitygauntlet.first_stone.desc": "Получите первый Камень Бесконечности",
+    "advancement.infinitygauntlet.all_stones": "Все шесть камней",
+    "advancement.infinitygauntlet.all_stones.desc": "Соберите все шесть Камней Бесконечности",
+    "advancement.infinitygauntlet.defeat_thanos": "Я неизбежен",
+    "advancement.infinitygauntlet.defeat_thanos.desc": "Победите Таноса"
 }

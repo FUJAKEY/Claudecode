@@ -1,0 +1,89 @@
+{
+    "parent": "infinitygauntlet:root",
+    "display": {
+        "icon": {
+            "item": "infinitygauntlet:space_stone"
+        },
+        "title": {
+            "translate": "advancement.infinitygauntlet.first_stone"
+        },
+        "description": {
+            "translate": "advancement.infinitygauntlet.first_stone.desc"
+        },
+        "frame": "task",
+        "show_toast": true,
+        "announce_to_chat": true
+    },
+    "criteria": {
+        "has_space": {
+            "trigger": "minecraft:inventory_changed",
+            "conditions": {
+                "items": [
+                    {
+                        "item": "infinitygauntlet:space_stone"
+                    }
+                ]
+            }
+        },
+        "has_time": {
+            "trigger": "minecraft:inventory_changed",
+            "conditions": {
+                "items": [
+                    {
+                        "item": "infinitygauntlet:time_stone"
+                    }
+                ]
+            }
+        },
+        "has_reality": {
+            "trigger": "minecraft:inventory_changed",
+            "conditions": {
+                "items": [
+                    {
+                        "item": "infinitygauntlet:reality_stone"
+                    }
+                ]
+            }
+        },
+        "has_power": {
+            "trigger": "minecraft:inventory_changed",
+            "conditions": {
+                "items": [
+                    {
+                        "item": "infinitygauntlet:power_stone"
+                    }
+                ]
+            }
+        },
+        "has_mind": {
+            "trigger": "minecraft:inventory_changed",
+            "conditions": {
+                "items": [
+                    {
+                        "item": "infinitygauntlet:mind_stone"
+                    }
+                ]
+            }
+        },
+        "has_soul": {
+            "trigger": "minecraft:inventory_changed",
+            "conditions": {
+                "items": [
+                    {
+                        "item": "infinitygauntlet:soul_stone"
+                    }
+                ]
+            }
+        }
+    },
+    "requirements": [
+        [
+            "has_space",
+            "has_time",
+            "has_reality",
+            "has_power",
+            "has_mind",
+            "has_soul"
+        ]
+    ]
+}

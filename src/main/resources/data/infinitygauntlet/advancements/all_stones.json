@@ -1,0 +1,47 @@
+{
+    "parent": "infinitygauntlet:first_stone",
+    "display": {
+        "icon": {
+            "item": "infinitygauntlet:infinity_gauntlet"
+        },
+        "title": {
+            "translate": "advancement.infinitygauntlet.all_stones"
+        },
+        "description": {
+            "translate": "advancement.infinitygauntlet.all_stones.desc"
+        },
+        "frame": "challenge",
+        "show_toast": true,
+        "announce_to_chat": true
+    },
+    "criteria": {
+        "has_all": {
+            "trigger": "minecraft:inventory_changed",
+            "conditions": {
+                "items": [
+                    {
+                        "item": "infinitygauntlet:space_stone"
+                    },
+                    {
+                        "item": "infinitygauntlet:time_stone"
+                    },
+                    {
+                        "item": "infinitygauntlet:reality_stone"
+                    },
+                    {
+                        "item": "infinitygauntlet:power_stone"
+                    },
+                    {
+                        "item": "infinitygauntlet:mind_stone"
+                    },
+                    {
+                        "item": "infinitygauntlet:soul_stone"
+                    }
+                ]
+            }
+        }
+    },
+    "rewards": {
+        "experience": 500
+    }
+}

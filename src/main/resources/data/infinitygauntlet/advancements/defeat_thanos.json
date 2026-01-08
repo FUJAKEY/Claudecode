@@ -1,0 +1,31 @@
+{
+    "parent": "infinitygauntlet:all_stones",
+    "display": {
+        "icon": {
+            "item": "infinitygauntlet:thanos_sword"
+        },
+        "title": {
+            "translate": "advancement.infinitygauntlet.defeat_thanos"
+        },
+        "description": {
+            "translate": "advancement.infinitygauntlet.defeat_thanos.desc"
+        },
+        "frame": "challenge",
+        "show_toast": true,
+        "announce_to_chat": true,
+        "hidden": true
+    },
+    "criteria": {
+        "kill_thanos": {
+            "trigger": "minecraft:player_killed_entity",
+            "conditions": {
+                "entity": {
+                    "type": "infinitygauntlet:thanos"
+                }
+            }
+        }
+    },
+    "rewards": {
+        "experience": 1000
+    }
+}

@@ -9,6 +9,12 @@
     "item.infinitygauntlet.vibranium_ingot": "Vibranium Ingot",
     "item.infinitygauntlet.vibranium_nugget": "Vibranium Nugget",
     "item.infinitygauntlet.gauntlet_core": "Gauntlet Core",
+    "item.infinitygauntlet.thanos_sword": "Thanos' Double-Edged Sword",
+    "item.infinitygauntlet.vibranium_shield": "Vibranium Shield",
+    "item.infinitygauntlet.nano_helmet": "Nano Helmet",
+    "item.infinitygauntlet.nano_chestplate": "Nano Chestplate",
+    "item.infinitygauntlet.nano_leggings": "Nano Leggings",
+    "item.infinitygauntlet.nano_boots": "Nano Boots",
     "block.infinitygauntlet.vibranium_ore": "Vibranium Ore",
     "block.infinitygauntlet.vibranium_block": "Block of Vibranium",
     "entity.infinitygauntlet.thanos": "Thanos",
@@ -18,5 +24,13 @@
     "key.infinitygauntlet.switch_stone": "Switch Stone",
     "key.infinitygauntlet.switch_sub_ability": "Switch Sub-Ability",
     "key.infinitygauntlet.combo_ability": "Combo Ability",
-    "key.infinitygauntlet.toggle_infinity": "Toggle Infinity"
+    "key.infinitygauntlet.toggle_infinity": "Toggle Infinity",
+    "advancement.infinitygauntlet.root": "Power Unlimited",
+    "advancement.infinitygauntlet.root.desc": "Obtain the Infinity Gauntlet",
+    "advancement.infinitygauntlet.first_stone": "First Stone",
+    "advancement.infinitygauntlet.first_stone.desc": "Obtain your first Infinity Stone",
+    "advancement.infinitygauntlet.all_stones": "All Six Stones",
+    "advancement.infinitygauntlet.all_stones.desc": "Collect all six Infinity Stones",
+    "advancement.infinitygauntlet.defeat_thanos": "I Am Inevitable",
+    "advancement.infinitygauntlet.defeat_thanos.desc": "Defeat Thanos"
 }

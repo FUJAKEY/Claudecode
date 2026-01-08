@@ -1,0 +1,29 @@
+{
+    "parent": "infinitygauntlet:first_stone",
+    "display": {
+        "icon": {
+            "item": "infinitygauntlet:infinity_gauntlet"
+        },
+        "title": {
+            "translate": "advancement.infinitygauntlet.root"
+        },
+        "description": {
+            "translate": "advancement.infinitygauntlet.root.desc"
+        },
+        "background": "minecraft:textures/gui/advancements/backgrounds/end.png",
+        "show_toast": false,
+        "announce_to_chat": false
+    },
+    "criteria": {
+        "has_gauntlet": {
+            "trigger": "minecraft:inventory_changed",
+            "conditions": {
+                "items": [
+                    {
+                        "item": "infinitygauntlet:infinity_gauntlet"
+                    }
+                ]
+            }
+        }
+    }
+}
