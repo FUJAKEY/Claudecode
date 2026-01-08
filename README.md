@@ -252,4 +252,4 @@ Issues and Pull Requests are welcome!
 
 ---
 
-**Made with ❤️ by AntigravityAI**
+**Made with ❤️ by FUJAKEY**

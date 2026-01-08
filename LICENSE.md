@@ -4,7 +4,7 @@
 
 ### Antigravity Open Source License v1.0
 
-Copyright (c) 2026 AntigravityAI
+Copyright (c) 2026 FUJAKEY
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -39,7 +39,7 @@ furnished to do so, subject to the following conditions:
 
 ### Открытая Лицензия Antigravity v1.0
 
-Авторское право (c) 2026 AntigravityAI
+Авторское право (c) 2026 FUJAKEY
 
 Настоящим предоставляется бесплатное разрешение любому лицу, получившему копию
 данного программного обеспечения и сопутствующей документации ("Программное обеспечение"),
