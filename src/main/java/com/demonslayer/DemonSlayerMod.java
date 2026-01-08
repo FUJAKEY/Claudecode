@@ -3,6 +3,7 @@ package com.demonslayer;
 import com.demonslayer.init.ModItems;
 import com.demonslayer.init.ModEntities;
 import com.demonslayer.init.ModEffects;
+import com.demonslayer.init.ModParticles;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.eventbus.api.IEventBus;
 import net.minecraftforge.fml.common.Mod;
@@ -20,10 +21,11 @@ public class DemonSlayerMod {
     public DemonSlayerMod() {
         IEventBus modEventBus = FMLJavaModLoadingContext.get().getModEventBus();
         
-        // Register items, entities, effects
+        // Register items, entities, effects, particles
         ModItems.register(modEventBus);
         ModEntities.register(modEventBus);
         ModEffects.register(modEventBus);
+        ModParticles.register(modEventBus);
         
         // Setup events
         modEventBus.addListener(this::commonSetup);
