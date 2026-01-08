@@ -35,6 +35,9 @@ public class DemonSlayerMod {
     }
     
     private void commonSetup(final FMLCommonSetupEvent event) {
+        event.enqueueWork(() -> {
+            ModEntities.registerAttributes();
+        });
         LOGGER.info("Total Concentration Breathing ready!");
     }
     

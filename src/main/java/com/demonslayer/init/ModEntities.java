@@ -2,8 +2,10 @@ package com.demonslayer.init;
 
 import com.demonslayer.DemonSlayerMod;
 import com.demonslayer.entity.DemonEntity;
+import com.demonslayer.entity.MuzanEntity;
 import net.minecraft.entity.EntityClassification;
 import net.minecraft.entity.EntityType;
+import net.minecraft.entity.ai.attributes.GlobalEntityTypeAttributes;
 import net.minecraftforge.eventbus.api.IEventBus;
 import net.minecraftforge.fml.RegistryObject;
 import net.minecraftforge.registries.DeferredRegister;
@@ -19,7 +21,19 @@ public class ModEntities {
                     .clientTrackingRange(48)
                     .build("demon"));
 
+    public static final RegistryObject<EntityType<MuzanEntity>> MUZAN = ENTITIES.register("muzan",
+            () -> EntityType.Builder.of(MuzanEntity::new, EntityClassification.MONSTER)
+                    .sized(1.0F, 2.5F)
+                    .clientTrackingRange(64)
+                    .fireImmune()
+                    .build("muzan"));
+
     public static void register(IEventBus eventBus) {
         ENTITIES.register(eventBus);
+    }
+    
+    public static void registerAttributes() {
+        GlobalEntityTypeAttributes.put(DEMON.get(), DemonEntity.createAttributes().build());
+        GlobalEntityTypeAttributes.put(MUZAN.get(), MuzanEntity.createAttributes().build());
     }
 }

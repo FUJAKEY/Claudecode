@@ -73,6 +73,19 @@ public class ModItems {
     public static final RegistryObject<Item> BREATHING_SCROLL = ITEMS.register("breathing_scroll",
             () -> new BreathingScrollItem(new Item.Properties().tab(ModItemGroup.DEMON_SLAYER_TAB).stacksTo(1).rarity(Rarity.EPIC)));
 
+    // ========== V2.0 NEW ITEMS ==========
+    public static final RegistryObject<Item> DUAL_NICHIRIN = ITEMS.register("dual_nichirin",
+            () -> new DualNichirinItem(new Item.Properties().tab(ModItemGroup.DEMON_SLAYER_TAB).stacksTo(1).rarity(Rarity.EPIC)));
+
+    public static final RegistryObject<Item> ONIGIRI = ITEMS.register("onigiri",
+            () -> new OnigiriItem(new Item.Properties().tab(ModItemGroup.DEMON_SLAYER_TAB).stacksTo(16)));
+
+    public static final RegistryObject<Item> DEMON_ART_BOOK = ITEMS.register("demon_art_book",
+            () -> new DemonArtBookItem(new Item.Properties().tab(ModItemGroup.DEMON_SLAYER_TAB).stacksTo(1).rarity(Rarity.RARE)));
+
+    public static final RegistryObject<Item> HASHIRA_BADGE = ITEMS.register("hashira_badge",
+            () -> new Item(new Item.Properties().tab(ModItemGroup.DEMON_SLAYER_TAB).stacksTo(1).rarity(Rarity.EPIC)));
+
     public static void register(IEventBus eventBus) {
         ITEMS.register(eventBus);
     }
