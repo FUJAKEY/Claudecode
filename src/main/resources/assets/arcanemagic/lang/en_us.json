@@ -16,6 +16,8 @@
     "item.arcanemagic.tome_heal": "Tome of Healing",
     "item.arcanemagic.tome_teleport": "Tome of Teleportation",
     "item.arcanemagic.tome_meteor": "Tome of Meteor Shower",
+    "item.arcanemagic.tome_void_rift": "Tome of Void Rift",
+    "item.arcanemagic.tome_dragons_wrath": "Tome of Dragon's Wrath",
     "block.arcanemagic.mana_altar": "Mana Altar",
     "block.arcanemagic.arcane_pedestal": "Arcane Pedestal",
     "block.arcanemagic.magic_ore": "Magic Ore",
@@ -31,7 +33,15 @@
     "spell.arcanemagic.teleport": "Teleport",
     "spell.arcanemagic.teleport.desc": "Teleport up to 20 blocks forward",
     "spell.arcanemagic.meteor_shower": "Meteor Shower",
-    "spell.arcanemagic.meteor_shower.desc": "Rain fire from the sky upon your enemies",
+    "spell.arcanemagic.meteor_shower.desc": "APOCALYPTIC: 25 meteors rain massive destruction!",
+    "spell.arcanemagic.void_rift": "Void Rift",
+    "spell.arcanemagic.void_rift.desc": "Opens a dimensional rift that pulls in and destroys enemies",
+    "spell.arcanemagic.dragons_wrath": "Dragon's Wrath",
+    "spell.arcanemagic.dragons_wrath.desc": "Summons a spectral dragon that breathes devastating fire",
+    "key.categories.arcanemagic": "Arcane Magic",
+    "key.arcanemagic.next_spell": "Next Spell",
+    "key.arcanemagic.prev_spell": "Previous Spell",
+    "key.arcanemagic.cast_spell": "Cast Spell",
     "tooltip.arcanemagic.wand_tier": "Tier: %s",
     "message.arcanemagic.no_spell_bound": "No spell bound to this wand!",
     "message.arcanemagic.tier_too_low": "Wand tier too low for this spell!",
@@ -41,5 +51,6 @@
     "message.arcanemagic.spell_learned": "Learned spell: %s",
     "message.arcanemagic.spell_already_bound": "This spell is already bound!",
     "message.arcanemagic.wand_full": "Wand has no more spell slots!",
-    "message.arcanemagic.wand_tier_low": "Wand tier too low for this spell!"
+    "message.arcanemagic.wand_tier_low": "Wand tier too low for this spell!",
+    "message.arcanemagic.spell_switched": "Switched to: %s"
 }

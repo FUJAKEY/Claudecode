@@ -58,8 +58,13 @@ public class ArcaneMagicMod {
     }
 
     private void clientSetup(final FMLClientSetupEvent event) {
-        // Register client-side overlays
+        // Register keybindings
+        com.arcanemagic.client.ModKeyBindings.register();
+
+        // Register client-side overlays and input handlers
         MinecraftForge.EVENT_BUS.register(new ManaHudOverlay());
+        MinecraftForge.EVENT_BUS.register(new com.arcanemagic.client.KeyInputHandler());
+
         LOGGER.info("ArcaneMagic client setup complete!");
     }
 }

@@ -16,6 +16,8 @@
     "item.arcanemagic.tome_heal": "Том Исцеления",
     "item.arcanemagic.tome_teleport": "Том Телепортации",
     "item.arcanemagic.tome_meteor": "Том Метеоритного Дождя",
+    "item.arcanemagic.tome_void_rift": "Том Разлома Пустоты",
+    "item.arcanemagic.tome_dragons_wrath": "Том Гнева Дракона",
     "block.arcanemagic.mana_altar": "Алтарь Маны",
     "block.arcanemagic.arcane_pedestal": "Тайный Пьедестал",
     "block.arcanemagic.magic_ore": "Магическая Руда",
@@ -31,7 +33,15 @@
     "spell.arcanemagic.teleport": "Телепортация",
     "spell.arcanemagic.teleport.desc": "Телепортирует на 20 блоков вперёд",
     "spell.arcanemagic.meteor_shower": "Метеоритный Дождь",
-    "spell.arcanemagic.meteor_shower.desc": "Обрушивает огненный дождь на врагов",
+    "spell.arcanemagic.meteor_shower.desc": "АПОКАЛИПСИС: 25 метеоритов обрушивают разрушение!",
+    "spell.arcanemagic.void_rift": "Разлом Пустоты",
+    "spell.arcanemagic.void_rift.desc": "Открывает измерённый разлом, засасывающий и уничтожающий врагов",
+    "spell.arcanemagic.dragons_wrath": "Гнев Дракона",
+    "spell.arcanemagic.dragons_wrath.desc": "Призывает призрачного дракона, изрыгающего опустошающий огонь",
+    "key.categories.arcanemagic": "Тайная Магия",
+    "key.arcanemagic.next_spell": "Следующее Заклинание",
+    "key.arcanemagic.prev_spell": "Предыдущее Заклинание",
+    "key.arcanemagic.cast_spell": "Применить Заклинание",
     "tooltip.arcanemagic.wand_tier": "Уровень: %s",
     "message.arcanemagic.no_spell_bound": "К жезлу не привязано заклинание!",
     "message.arcanemagic.tier_too_low": "Уровень жезла слишком низок!",
@@ -41,5 +51,6 @@
     "message.arcanemagic.spell_learned": "Изучено заклинание: %s",
     "message.arcanemagic.spell_already_bound": "Это заклинание уже привязано!",
     "message.arcanemagic.wand_full": "В жезле нет свободных слотов!",
-    "message.arcanemagic.wand_tier_low": "Уровень жезла слишком низок для этого заклинания!"
+    "message.arcanemagic.wand_tier_low": "Уровень жезла слишком низок для этого заклинания!",
+    "message.arcanemagic.spell_switched": "Переключено на: %s"
 }

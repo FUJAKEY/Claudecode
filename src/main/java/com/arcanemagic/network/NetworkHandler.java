@@ -33,6 +33,14 @@ public class NetworkHandler {
                 ManaPacket::decode,
                 ManaPacket::handle);
 
+        // Spell switching packet (client -> server)
+        INSTANCE.registerMessage(
+                packetId++,
+                SpellSwitchPacket.class,
+                SpellSwitchPacket::encode,
+                SpellSwitchPacket::decode,
+                SpellSwitchPacket::handle);
+
         ArcaneMagicMod.LOGGER.info("ArcaneMagic network registered!");
     }
 }
