@@ -1,0 +1,8 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": ["SS", "SS"],
+  "key": {
+    "S": {"item": "arcanemagic:mana_crystal_shard"}
+  },
+  "result": {"item": "arcanemagic:mana_crystal"}
+}

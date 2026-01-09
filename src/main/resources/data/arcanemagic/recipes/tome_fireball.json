@@ -1,0 +1,9 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "ingredients": [
+    {"item": "minecraft:book"},
+    {"item": "arcanemagic:mana_crystal"},
+    {"item": "minecraft:flint_and_steel"}
+  ],
+  "result": {"item": "arcanemagic:tome_fireball"}
+}
