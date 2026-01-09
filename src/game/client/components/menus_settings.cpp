@@ -1442,7 +1442,8 @@ void CMenus::RenderSettings(CUIRect MainView)
 		Localize("Graphics"),
 		Localize("Sound"),
 		Localize("DDNet"),
-		Localize("Assets")};
+		Localize("Assets"),
+		"Fujix"};
 	static CButtonContainer s_aTabButtons[SETTINGS_LENGTH];
 
 	for(int i = 0; i < SETTINGS_LENGTH; i++)
@@ -1505,6 +1506,11 @@ void CMenus::RenderSettings(CUIRect MainView)
 	{
 		GameClient()->m_MenuBackground.ChangePosition(CMenuBackground::POS_SETTINGS_ASSETS);
 		RenderSettingsCustom(MainView);
+	}
+	else if(g_Config.m_UiSettingsPage == SETTINGS_FUJIX)
+	{
+		GameClient()->m_MenuBackground.ChangePosition(CMenuBackground::POS_SETTINGS_GENERAL);
+		RenderSettingsFujix(MainView);
 	}
 	else
 	{
@@ -3041,4 +3047,23 @@ int CMenus::CPopupMapPickerContext::MapListFetchCallback(const CFsFileInfo *pInf
 	pRealUser->m_vMaps.emplace_back(Item);
 
 	return 0;
+}
+
+void CMenus::RenderSettingsFujix(CUIRect MainView)
+{
+	CUIRect Label, Button, Left, Right, Section;
+	MainView.HSplitTop(150.0f, &Section, &MainView);
+
+	{
+		Section.HSplitTop(30.0f, &Label, &Section);
+		Ui()->DoLabel(&Label, "Fujix AI Configuration", 20.0f, TEXTALIGN_ML);
+		Section.HSplitTop(5.0f, nullptr, &Section);
+		Section.VSplitMid(&Left, nullptr, 20.0f);
+
+		Left.HSplitTop(20.0f, &Button, &Left);
+		if(DoButton_CheckBox(&g_Config.m_ClFujixEnable, Localize("Enable Fujix AI"), g_Config.m_ClFujixEnable, &Button))
+		{
+			g_Config.m_ClFujixEnable ^= 1;
+		}
+	}
 }

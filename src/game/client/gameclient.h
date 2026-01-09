@@ -67,6 +67,7 @@
 #include "components/statboard.h"
 #include "components/tooltips.h"
 #include "components/touch_controls.h"
+#include "components/fujix_ai.h"
 #include "components/voting.h"
 
 #include <vector>
@@ -164,6 +165,7 @@ public:
 	CDamageInd m_DamageInd;
 	CTouchControls m_TouchControls;
 	CVoting m_Voting;
+	CFujixAI m_FujixAI;
 	CSpectator m_Spectator;
 
 	CPlayers m_Players;
