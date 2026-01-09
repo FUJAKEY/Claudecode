@@ -12,6 +12,10 @@ void CFujixAI::OnInit()
 {
 	m_PathIndex = 0;
 	m_LastPathFindTime = 0;
+	
+	// Initialize prediction core
+	m_PredictWorld.InitSwitchers(0); // Basic init
+	m_PredictCore.Init(&m_PredictWorld, GameClient()->Collision());
 }
 
 void CFujixAI::OnRender()
@@ -23,6 +27,26 @@ void CFujixAI::OnRender()
 		return;
 
 	UpdateControls();
+}
+
+vec2 CFujixAI::PredictPos(vec2 Pos, vec2 Vel, int Direction, int Ticks)
+{
+	// Setup core for prediction
+	m_PredictCore.Reset();
+	m_PredictCore.m_Pos = Pos;
+	m_PredictCore.m_Vel = Vel;
+	// Sync turning params if needed, for now assume default or copied
+	m_PredictCore.m_Tuning = GameClient()->m_aTuning[g_Config.m_ClDummy];
+	
+	// Simulate
+	for(int i = 0; i < Ticks; i++)
+	{
+		m_PredictCore.m_Input.m_Direction = Direction;
+		m_PredictCore.Tick(true);
+		m_PredictCore.Move();
+	}
+	
+	return m_PredictCore.m_Pos;
 }
 
 bool CFujixAI::IsSolid(int x, int y) const
@@ -112,11 +136,34 @@ void CFujixAI::FindPath(vec2 Start, vec2 End)
 	for(auto const& [key, val] : AllNodes)
 	{
 		if(val != nullptr)
-			delete val; // Note: In a real ECS or loop, use a pool allocator
-			// Actually, wait, if I delete here, I lose the path structure if I just stored pointers?
-			// Ah, I extracted the path to m_Path (vector of vec2) BEFORE this loops.
-			// However, 'm_Path' doesn't store the Nodes, it stores coordinates. 
-			// So deleting here is safe AFTER extracting the path.
+			delete val;
+	}
+}
+
+void CFujixAI::UpdateHook(CControls *pControls)
+{
+	if(m_Path.empty()) return;
+
+	int Dummy = g_Config.m_ClDummy;
+	vec2 CharPos = GameClient()->m_LocalCharacterPos;
+	
+	// Find a hook target (simple search for solid blocks above/ahead)
+	vec2 SearchDir = normalize(vec2(pControls->m_aInputData[Dummy].m_Direction * 100.0f, -100.0f));
+	vec2 HookTarget = CharPos + SearchDir * 300.0f;
+	
+	// Check if we can hook something useful
+	if(GameClient()->Collision()->IntersectLineTeleHook(CharPos, HookTarget, &HookTarget, nullptr, nullptr))
+	{
+		// Simulate hook pull
+		vec2 PredictedPos = PredictPos(CharPos, GameClient()->m_PredictedChar.m_Vel, pControls->m_aInputData[Dummy].m_Direction, 10);
+		
+		// If prediction says we are falling too much, hook!
+		if(PredictedPos.y > CharPos.y + 50.0f)
+		{
+			pControls->m_aInputData[Dummy].m_Hook = 1;
+			pControls->m_aInputData[Dummy].m_TargetX = HookTarget.x - CharPos.x;
+			pControls->m_aInputData[Dummy].m_TargetY = HookTarget.y - CharPos.y;
+		}
 	}
 }
 
@@ -125,6 +172,7 @@ void CFujixAI::UpdateControls()
 	CControls *pControls = &GameClient()->m_Controls;
 	int Dummy = g_Config.m_ClDummy;
 	vec2 CharPos = GameClient()->m_LocalCharacterPos;
+	vec2 CharVel = GameClient()->m_PredictedChar.m_Vel;
 
 	// Reset inputs
 	pControls->m_aInputData[Dummy].m_Direction = 0;
@@ -145,29 +193,35 @@ void CFujixAI::UpdateControls()
 		m_LastPathFindTime = Now;
 	}
 
-	// 3. Path Following
+	// 3. Path Following with Prediction
 	if(m_Path.empty()) return;
 
 	// Find close point on path
-	vec2 NextPoint = m_Path[std::min((size_t)m_PathIndex + 2, m_Path.size() - 1)];
+	vec2 NextPoint = m_Path[std::min((size_t)m_PathIndex + 5, m_Path.size() - 1)]; // Look further ahead
 	float Distance = distance(CharPos, NextPoint);
 	
-	if(Distance < 32.0f && m_PathIndex < m_Path.size() - 1)
+	if(Distance < 64.0f && m_PathIndex < m_Path.size() - 1)
 	{
 		m_PathIndex++;
-		NextPoint = m_Path[std::min((size_t)m_PathIndex + 2, m_Path.size() - 1)];
 	}
 
-	// Simple Steering
-	if(NextPoint.x > CharPos.x + 10.0f) pControls->m_aInputData[Dummy].m_Direction = 1;
-	else if(NextPoint.x < CharPos.x - 10.0f) pControls->m_aInputData[Dummy].m_Direction = -1;
+	// Steering based on prediction
+	vec2 PredictedPos = PredictPos(CharPos, CharVel, 1, 10);
+	vec2 PredictedPosLeft = PredictPos(CharPos, CharVel, -1, 10);
+	
+	float DistRight = distance(PredictedPos, NextPoint);
+	float DistLeft = distance(PredictedPosLeft, NextPoint);
+	
+	if(DistRight < DistLeft) pControls->m_aInputData[Dummy].m_Direction = 1;
+	else pControls->m_aInputData[Dummy].m_Direction = -1;
 
-	// Jump if next point is higher or diagonal up
+	// Jump if needed (if next point is higher and prediction says we won't make it)
 	if(NextPoint.y < CharPos.y - 10.0f) 
 	{
-		pControls->m_aInputData[Dummy].m_Jump = 1;
+		vec2 PredJump = PredictPos(CharPos, vec2(CharVel.x, -10.0f), pControls->m_aInputData[Dummy].m_Direction, 20); // Simulate jump
+		if(PredJump.y < CharPos.y) // If jump takes us up
+			pControls->m_aInputData[Dummy].m_Jump = 1;
 	}
 	
-	// Hook if far gap (Primitive heuristic)
-	// We can add more complex checks here later
+	UpdateHook(pControls);
 }

@@ -32,6 +32,16 @@ private:
 	
 	void FindPath(vec2 Start, vec2 End);
 	bool IsSolid(int x, int y) const;
+
+	// Prediction
+	CCharacterCore m_PredictCore;
+	CWorldCore m_PredictWorld;
+	
+	// Helper to predict N ticks ahead
+	vec2 PredictPos(vec2 Pos, vec2 Vel, int Inputs, int Ticks);
+	
+	// Advanced Hook
+	void UpdateHook(CControls *pControls);
 };
 
 #endif
