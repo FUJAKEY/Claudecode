@@ -63,8 +63,14 @@ public abstract class Spell {
 
     /**
      * Check if the player can cast this spell
+     * Includes check for The World freeze effect
      */
     public boolean canCast(PlayerEntity player, WandItem.WandTier wandTier) {
+        // Check if frozen by The World - only time stop caster can use spells
+        if (TheWorldSpell.isEntityFrozen(player.getUUID())) {
+            return false; // Frozen entities cannot cast
+        }
+
         return wandTier.ordinal() >= getMinTier().ordinal();
     }
 }

@@ -1,47 +1,48 @@
 package com.arcanemagic.spell;
 
 import com.arcanemagic.ArcaneMagicMod;
+import com.arcanemagic.init.ModSounds;
 import com.arcanemagic.item.WandItem;
-import net.minecraft.block.BlockState;
-import net.minecraft.block.Blocks;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.particles.ParticleTypes;
-import net.minecraft.util.ResourceLocation;
 import net.minecraft.util.SoundCategory;
-import net.minecraft.util.SoundEvent;
 import net.minecraft.util.math.AxisAlignedBB;
-import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.vector.Vector3d;
 import net.minecraft.world.World;
 import net.minecraft.world.server.ServerWorld;
-import net.minecraftforge.registries.ForgeRegistries;
 
 import java.util.*;
 
 /**
  * THE WORLD - Time Stop Spell
- * Freezes all entities in a 30 block radius for 10 seconds
- * Creates a translucent barrier sphere at the boundary
  * "ZA WARUDO! TOKI WO TOMARE!"
+ * 
+ * Freezes all entities in a 30 block radius for 10 seconds.
+ * Creates a visible honeycomb-pattern barrier sphere.
+ * Blocks entity passage through the barrier.
+ * Only the caster can move and use spells.
  */
 public class TheWorldSpell extends Spell {
 
-    // Track frozen entities and their original positions/motions
+    // Active time stops: casterUUID -> TimeStopData
+    private static final Map<UUID, TimeStopData> ACTIVE_TIME_STOPS = new HashMap<>();
+
+    // Frozen entities: entityUUID -> FrozenEntityData
     private static final Map<UUID, FrozenEntityData> FROZEN_ENTITIES = new HashMap<>();
-    private static final Map<UUID, Long> ACTIVE_TIME_STOPS = new HashMap<>();
-    private static final double RADIUS = 30.0;
-    private static final int DURATION_TICKS = 200; // 10 seconds
+
+    public static final double RADIUS = 30.0;
+    public static final int DURATION_TICKS = 200; // 10 seconds
 
     @Override
     public int getManaCost() {
-        return 150; // Very expensive
+        return 150;
     }
 
     @Override
     public int getCooldown() {
-        return 1200; // 60 seconds - god-tier ability
+        return 1200; // 60 seconds
     }
 
     @Override
@@ -67,31 +68,19 @@ public class TheWorldSpell extends Spell {
         ServerWorld serverWorld = (ServerWorld) world;
         Vector3d center = player.position();
 
-        // Play THE WORLD sound effect!
-        SoundEvent theWorldSound = ForgeRegistries.SOUND_EVENTS.getValue(
-                new ResourceLocation(ArcaneMagicMod.MOD_ID, "the_world"));
-        if (theWorldSound != null) {
-            world.playSound(null, player.getX(), player.getY(), player.getZ(),
-                    theWorldSound, SoundCategory.PLAYERS, 3.0f, 1.0f);
-        }
+        // Play ZA WARUDO sound effect
+        world.playSound(null, player.getX(), player.getY(), player.getZ(),
+                ModSounds.THE_WORLD.get(), SoundCategory.PLAYERS, 2.0f, 1.0f);
+
+        // Create time stop data
+        long endTime = world.getGameTime() + DURATION_TICKS;
+        TimeStopData data = new TimeStopData(center, endTime, player.getUUID());
+        ACTIVE_TIME_STOPS.put(player.getUUID(), data);
 
         // Initial flash effect
-        for (int i = 0; i < 200; i++) {
-            double angle = Math.random() * Math.PI * 2;
-            double angle2 = Math.random() * Math.PI;
-            double r = RADIUS;
-            double x = center.x + Math.sin(angle2) * Math.cos(angle) * r;
-            double y = center.y + Math.cos(angle2) * r;
-            double z = center.z + Math.sin(angle2) * Math.sin(angle) * r;
+        createBarrierParticles(serverWorld, center, RADIUS, true);
 
-            serverWorld.sendParticles(ParticleTypes.END_ROD,
-                    x, y, z, 1, 0, 0, 0, 0);
-        }
-
-        // Create golden barrier sphere effect
-        createBarrierSphere(serverWorld, center, RADIUS);
-
-        // Find all entities in radius (except caster)
+        // Find and freeze all entities in radius (except caster)
         AxisAlignedBB area = new AxisAlignedBB(
                 center.x - RADIUS, center.y - RADIUS, center.z - RADIUS,
                 center.x + RADIUS, center.y + RADIUS, center.z + RADIUS);
@@ -99,108 +88,133 @@ public class TheWorldSpell extends Spell {
         List<Entity> entities = world.getEntities(player, area,
                 e -> e.distanceToSqr(center) <= RADIUS * RADIUS && e instanceof LivingEntity);
 
-        // Freeze all entities
-        long endTime = world.getGameTime() + DURATION_TICKS;
-        ACTIVE_TIME_STOPS.put(player.getUUID(), endTime);
-
         for (Entity entity : entities) {
             if (entity instanceof LivingEntity && entity != player) {
                 LivingEntity living = (LivingEntity) entity;
 
-                // Store original data
-                FrozenEntityData data = new FrozenEntityData(
+                FrozenEntityData frozenData = new FrozenEntityData(
                         living.position(),
                         living.getDeltaMovement(),
                         living.yRot,
                         living.xRot,
-                        endTime);
-                FROZEN_ENTITIES.put(living.getUUID(), data);
+                        endTime,
+                        player.getUUID());
+                FROZEN_ENTITIES.put(living.getUUID(), frozenData);
 
-                // Stop movement
+                // Stop movement immediately
                 living.setDeltaMovement(0, 0, 0);
                 living.setNoGravity(true);
-
-                // Visual effect on frozen entity
-                serverWorld.sendParticles(ParticleTypes.END_ROD,
-                        living.getX(), living.getY() + 1, living.getZ(),
-                        20, 0.5, 0.5, 0.5, 0.02);
             }
         }
 
-        // Schedule time resume (handled in tick event)
-        ArcaneMagicMod.LOGGER.info("THE WORLD activated! Froze " + entities.size() + " entities for 10 seconds!");
-
+        ArcaneMagicMod.LOGGER.info("THE WORLD! Froze " + entities.size() + " entities for 10 seconds!");
         return true;
     }
 
-    private void createBarrierSphere(ServerWorld world, Vector3d center, double radius) {
-        // Create visible barrier at the edge of time stop zone
-        int particleCount = 500;
+    /**
+     * Create barrier particles in honeycomb pattern
+     */
+    private static void createBarrierParticles(ServerWorld world, Vector3d center, double radius, boolean isInitial) {
+        int particleCount = isInitial ? 800 : 200;
+
+        // Honeycomb pattern using fibonacci sphere distribution
+        double goldenRatio = (1 + Math.sqrt(5)) / 2;
 
         for (int i = 0; i < particleCount; i++) {
-            // Spherical coordinates
-            double phi = Math.acos(1 - 2 * (i / (double) particleCount));
-            double theta = Math.PI * (1 + Math.sqrt(5)) * i;
+            double theta = 2 * Math.PI * i / goldenRatio;
+            double phi = Math.acos(1 - 2 * (i + 0.5) / particleCount);
 
             double x = center.x + radius * Math.sin(phi) * Math.cos(theta);
             double y = center.y + radius * Math.cos(phi);
             double z = center.z + radius * Math.sin(phi) * Math.sin(theta);
 
-            // Golden barrier particles
-            world.sendParticles(ParticleTypes.END_ROD,
-                    x, y, z, 1, 0, 0, 0, 0);
-
-            // Additional purple tint
+            // Golden/yellow barrier particles
             if (i % 3 == 0) {
-                world.sendParticles(ParticleTypes.REVERSE_PORTAL,
-                        x, y, z, 1, 0, 0, 0, 0);
+                world.sendParticles(ParticleTypes.END_ROD, x, y, z, 1, 0, 0, 0, 0);
+            }
+            if (i % 5 == 0) {
+                world.sendParticles(ParticleTypes.FLAME, x, y, z, 1, 0, 0, 0, 0);
+            }
+            // Honeycomb effect - hexagonal pattern hints
+            if (i % 7 == 0) {
+                world.sendParticles(ParticleTypes.ENCHANT, x, y, z, 2, 0.1, 0.1, 0.1, 0.02);
             }
         }
 
-        // Ring at ground level for visibility
-        for (int i = 0; i < 100; i++) {
-            double angle = (i / 100.0) * Math.PI * 2;
+        // Ring at ground level
+        for (int i = 0; i < 60; i++) {
+            double angle = (i / 60.0) * Math.PI * 2;
             double x = center.x + Math.cos(angle) * radius;
             double z = center.z + Math.sin(angle) * radius;
 
-            world.sendParticles(ParticleTypes.FLAME,
-                    x, center.y, z, 3, 0.1, 0.1, 0.1, 0);
+            world.sendParticles(ParticleTypes.FLAME, x, center.y, z, 2, 0.05, 0.5, 0.05, 0);
         }
     }
 
     /**
-     * Called every tick to maintain time stop and check for expiration
+     * Called every world tick to maintain time stop effects
      */
     public static void tickTimeStop(World world) {
         if (world.isClientSide)
             return;
 
+        ServerWorld serverWorld = (ServerWorld) world;
         long currentTime = world.getGameTime();
-        List<UUID> toRemove = new ArrayList<>();
 
-        // Update frozen entities
+        // Process active time stops
+        List<UUID> expiredStops = new ArrayList<>();
+
+        for (Map.Entry<UUID, TimeStopData> entry : ACTIVE_TIME_STOPS.entrySet()) {
+            TimeStopData data = entry.getValue();
+
+            if (currentTime >= data.endTime) {
+                expiredStops.add(entry.getKey());
+                continue;
+            }
+
+            // Render barrier particles every 5 ticks
+            if (currentTime % 5 == 0) {
+                createBarrierParticles(serverWorld, data.center, RADIUS, false);
+            }
+
+            // Block entities from passing through barrier
+            enforceBarrier(serverWorld, data);
+        }
+
+        // Clean up expired time stops
+        for (UUID casterId : expiredStops) {
+            ACTIVE_TIME_STOPS.remove(casterId);
+        }
+
+        // Process frozen entities
+        List<UUID> toUnfreeze = new ArrayList<>();
+
         for (Map.Entry<UUID, FrozenEntityData> entry : FROZEN_ENTITIES.entrySet()) {
             FrozenEntityData data = entry.getValue();
 
             if (currentTime >= data.endTime) {
-                toRemove.add(entry.getKey());
+                toUnfreeze.add(entry.getKey());
                 continue;
             }
 
-            // Find entity and keep it frozen
-            Entity entity = ((ServerWorld) world).getEntity(entry.getKey());
+            // Find and keep entity frozen
+            Entity entity = serverWorld.getEntity(entry.getKey());
             if (entity instanceof LivingEntity) {
                 LivingEntity living = (LivingEntity) entity;
 
-                // Keep at frozen position
+                // Lock position
                 living.setPos(data.frozenPos.x, data.frozenPos.y, data.frozenPos.z);
                 living.setDeltaMovement(0, 0, 0);
                 living.yRot = data.frozenYaw;
                 living.xRot = data.frozenPitch;
+                living.yRotO = data.frozenYaw;
+                living.xRotO = data.frozenPitch;
+                living.yBodyRot = data.frozenYaw;
+                living.yHeadRot = data.frozenYaw;
 
                 // Frozen particle effect
                 if (currentTime % 10 == 0) {
-                    ((ServerWorld) world).sendParticles(ParticleTypes.END_ROD,
+                    serverWorld.sendParticles(ParticleTypes.END_ROD,
                             living.getX(), living.getY() + 1, living.getZ(),
                             3, 0.3, 0.5, 0.3, 0.01);
                 }
@@ -208,36 +222,106 @@ public class TheWorldSpell extends Spell {
         }
 
         // Unfreeze expired entities
-        for (UUID id : toRemove) {
-            Entity entity = ((ServerWorld) world).getEntity(id);
+        for (UUID id : toUnfreeze) {
+            Entity entity = serverWorld.getEntity(id);
             if (entity instanceof LivingEntity) {
                 LivingEntity living = (LivingEntity) entity;
                 FrozenEntityData data = FROZEN_ENTITIES.get(id);
 
-                // Restore movement
                 living.setNoGravity(false);
                 living.setDeltaMovement(data.frozenMotion);
 
-                // Unfreeze particles
-                ((ServerWorld) world).sendParticles(ParticleTypes.FLASH,
+                // Unfreeze flash
+                serverWorld.sendParticles(ParticleTypes.FLASH,
                         living.getX(), living.getY() + 1, living.getZ(),
-                        5, 0.5, 0.5, 0.5, 0);
+                        3, 0.5, 0.5, 0.5, 0);
             }
             FROZEN_ENTITIES.remove(id);
         }
-
-        // Clean up expired time stops
-        ACTIVE_TIME_STOPS.entrySet().removeIf(e -> currentTime >= e.getValue());
     }
 
     /**
-     * Check if a position is inside an active time stop zone (for barrier
-     * collision)
+     * Enforce barrier - push entities back if they try to cross
      */
-    public static boolean isInsideTimeStop(Vector3d pos, UUID casterId) {
-        // For now, entities are frozen by position tracking
-        // Barrier collision would need additional implementation
-        return ACTIVE_TIME_STOPS.containsKey(casterId);
+    private static void enforceBarrier(ServerWorld world, TimeStopData data) {
+        double barrierThickness = 2.0;
+
+        // Check all entities near the barrier edge
+        AxisAlignedBB outerArea = new AxisAlignedBB(
+                data.center.x - RADIUS - barrierThickness,
+                data.center.y - RADIUS - barrierThickness,
+                data.center.z - RADIUS - barrierThickness,
+                data.center.x + RADIUS + barrierThickness,
+                data.center.y + RADIUS + barrierThickness,
+                data.center.z + RADIUS + barrierThickness);
+
+        List<Entity> nearbyEntities = world.getEntities((Entity) null, outerArea,
+                e -> e instanceof LivingEntity && !e.getUUID().equals(data.casterUUID));
+
+        for (Entity entity : nearbyEntities) {
+            double distance = entity.position().distanceTo(data.center);
+
+            // Entity trying to enter from outside
+            if (distance > RADIUS - 1 && distance < RADIUS + barrierThickness) {
+                // Calculate push direction
+                Vector3d toCenter = data.center.subtract(entity.position()).normalize();
+                boolean isInside = distance < RADIUS;
+
+                // Push back
+                Vector3d pushDir = isInside ? toCenter.scale(-1) : toCenter;
+                double pushStrength = 0.5;
+
+                entity.setDeltaMovement(pushDir.scale(pushStrength));
+                entity.hurtMarked = true;
+
+                // Barrier collision particles
+                world.sendParticles(ParticleTypes.ENCHANT,
+                        entity.getX(), entity.getY() + 1, entity.getZ(),
+                        10, 0.3, 0.3, 0.3, 0.1);
+            }
+        }
+    }
+
+    /**
+     * Check if an entity is frozen by The World
+     */
+    public static boolean isEntityFrozen(UUID entityUUID) {
+        return FROZEN_ENTITIES.containsKey(entityUUID);
+    }
+
+    /**
+     * Check if an entity can cast spells (not frozen, or is the time stop caster)
+     */
+    public static boolean canEntityCastSpells(UUID entityUUID) {
+        // If not frozen, can cast
+        if (!FROZEN_ENTITIES.containsKey(entityUUID)) {
+            // But check if they're inside someone else's time stop zone
+            // For now, allowing if not explicitly frozen
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * Check if this entity is the caster of an active time stop
+     */
+    public static boolean isTimeStopCaster(UUID entityUUID) {
+        return ACTIVE_TIME_STOPS.containsKey(entityUUID);
+    }
+
+    /**
+     * Data class for active time stops
+     */
+    private static class TimeStopData {
+        final Vector3d center;
+        final long endTime;
+        final UUID casterUUID;
+
+        TimeStopData(Vector3d center, long endTime, UUID casterUUID) {
+            this.center = center;
+            this.endTime = endTime;
+            this.casterUUID = casterUUID;
+        }
     }
 
     /**
@@ -249,13 +333,15 @@ public class TheWorldSpell extends Spell {
         final float frozenYaw;
         final float frozenPitch;
         final long endTime;
+        final UUID casterUUID;
 
-        FrozenEntityData(Vector3d pos, Vector3d motion, float yaw, float pitch, long endTime) {
+        FrozenEntityData(Vector3d pos, Vector3d motion, float yaw, float pitch, long endTime, UUID casterUUID) {
             this.frozenPos = pos;
             this.frozenMotion = motion;
             this.frozenYaw = yaw;
             this.frozenPitch = pitch;
             this.endTime = endTime;
+            this.casterUUID = casterUUID;
         }
     }
 }
