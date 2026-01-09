@@ -12,20 +12,27 @@ public class NetworkHandler {
 
     private static final String PROTOCOL_VERSION = "1";
 
-    public static final SimpleChannel CHANNEL = NetworkRegistry.newSimpleChannel(
-            new ResourceLocation(ArcaneMagicMod.MOD_ID, "main"),
-            () -> PROTOCOL_VERSION,
-            PROTOCOL_VERSION::equals,
-            PROTOCOL_VERSION::equals);
-
+    private static SimpleChannel INSTANCE;
     private static int packetId = 0;
 
+    public static SimpleChannel getChannel() {
+        return INSTANCE;
+    }
+
     public static void register() {
-        CHANNEL.registerMessage(
+        INSTANCE = NetworkRegistry.newSimpleChannel(
+                new ResourceLocation(ArcaneMagicMod.MOD_ID, "main"),
+                () -> PROTOCOL_VERSION,
+                PROTOCOL_VERSION::equals,
+                PROTOCOL_VERSION::equals);
+
+        INSTANCE.registerMessage(
                 packetId++,
                 ManaPacket.class,
                 ManaPacket::encode,
                 ManaPacket::decode,
                 ManaPacket::handle);
+
+        ArcaneMagicMod.LOGGER.info("ArcaneMagic network registered!");
     }
 }

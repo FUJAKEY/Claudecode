@@ -117,7 +117,7 @@ public class WandItem extends Item {
 
                     // Sync mana to client
                     if (player instanceof ServerPlayerEntity) {
-                        NetworkHandler.CHANNEL.send(
+                        NetworkHandler.getChannel().send(
                                 PacketDistributor.PLAYER.with(() -> (ServerPlayerEntity) player),
                                 new ManaPacket(mana.getMana(), mana.getMaxMana()));
                     }

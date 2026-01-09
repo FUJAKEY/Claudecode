@@ -4,6 +4,7 @@ import com.arcanemagic.init.ModBlocks;
 import com.arcanemagic.init.ModItems;
 import com.arcanemagic.capability.ManaCapability;
 import com.arcanemagic.event.ManaEvents;
+import com.arcanemagic.network.NetworkHandler;
 import com.arcanemagic.client.ManaHudOverlay;
 import net.minecraft.item.ItemGroup;
 import net.minecraft.item.ItemStack;
@@ -47,8 +48,12 @@ public class ArcaneMagicMod {
     }
 
     private void setup(final FMLCommonSetupEvent event) {
+        // Register network FIRST (before anything else uses it)
+        NetworkHandler.register();
+
         // Register capabilities
         ManaCapability.register();
+
         LOGGER.info("ArcaneMagic common setup complete!");
     }
 

@@ -123,7 +123,7 @@ public class ManaEvents {
      * Send mana data to client
      */
     public static void syncManaToClient(ServerPlayerEntity player, ManaCapability mana) {
-        NetworkHandler.CHANNEL.send(
+        NetworkHandler.getChannel().send(
                 PacketDistributor.PLAYER.with(() -> player),
                 new ManaPacket(mana.getMana(), mana.getMaxMana()));
     }
