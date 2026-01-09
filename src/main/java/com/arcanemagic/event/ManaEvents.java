@@ -70,13 +70,29 @@ public class ManaEvents {
 
             event.player.getCapability(ManaCapability.getCapability()).ifPresent(mana -> {
                 int oldMana = mana.getMana();
-                mana.regenerateMana(mana.getManaRegenRate());
+
+                // Dynamic regen: Base 1 + 1% of max mana
+                int baseRegen = mana.getManaRegenRate();
+                int bonusRegen = (int) (mana.getMaxMana() * 0.01);
+                int totalRegen = Math.max(1, baseRegen + bonusRegen);
+
+                mana.regenerateMana(totalRegen);
 
                 // Sync to client if mana changed
                 if (oldMana != mana.getMana() && event.player instanceof ServerPlayerEntity) {
                     syncManaToClient((ServerPlayerEntity) event.player, mana);
                 }
             });
+        }
+    }
+
+    /**
+     * World tick handler for The World spell time stop
+     */
+    @SubscribeEvent
+    public void onWorldTick(TickEvent.WorldTickEvent event) {
+        if (event.phase == TickEvent.Phase.END && !event.world.isClientSide) {
+            com.arcanemagic.spell.TheWorldSpell.tickTimeStop(event.world);
         }
     }
 

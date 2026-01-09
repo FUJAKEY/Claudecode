@@ -5,6 +5,7 @@ import com.arcanemagic.item.ManaCrystalItem;
 import com.arcanemagic.item.SpellTomeItem;
 import com.arcanemagic.item.WandItem;
 import com.arcanemagic.spell.*;
+import com.arcanemagic.item.ManaUpgradeItem;
 import net.minecraft.item.BlockItem;
 import net.minecraft.item.Item;
 import net.minecraftforge.fml.RegistryObject;
@@ -30,6 +31,9 @@ public class ModItems {
 
         public static final RegistryObject<Item> MANA_CRYSTAL_SHARD = ITEMS.register("mana_crystal_shard",
                         () -> new Item(defaultProps().stacksTo(64)));
+
+        public static final RegistryObject<Item> MANA_ORB = ITEMS.register("mana_orb",
+                        () -> new ManaUpgradeItem(defaultProps().stacksTo(16).rarity(net.minecraft.item.Rarity.RARE)));
 
         // ========== WAND CORES ==========
         public static final RegistryObject<Item> APPRENTICE_CORE = ITEMS.register("apprentice_core",
