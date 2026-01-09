@@ -78,7 +78,6 @@ public class LightningBoltSpell extends Spell {
         LightningBoltEntity lightning = EntityType.LIGHTNING_BOLT.create(world);
         if (lightning != null) {
             lightning.moveTo(hitPos.x, hitPos.y, hitPos.z);
-            lightning.setCause((ServerWorld) world, (LivingEntity) player);
             world.addFreshEntity(lightning);
         }
 
@@ -94,9 +93,9 @@ public class LightningBoltSpell extends Spell {
 
                 // Visual effect
                 if (world instanceof ServerWorld) {
-                    ((ServerWorld) world).sendParticles(ParticleTypes.ELECTRIC_SPARK,
+                    ((ServerWorld) world).sendParticles(ParticleTypes.FLASH,
                             entity.getX(), entity.getY() + 1, entity.getZ(),
-                            15, 0.5, 1.0, 0.5, 0.1);
+                            5, 0.5, 1.0, 0.5, 0.1);
                 }
             }
         }

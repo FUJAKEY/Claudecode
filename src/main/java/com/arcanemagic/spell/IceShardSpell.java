@@ -66,7 +66,7 @@ public class IceShardSpell extends Spell {
 
         // Spawn particles
         if (world instanceof ServerWorld) {
-            ((ServerWorld) world).sendParticles(ParticleTypes.SNOWFLAKE,
+            ((ServerWorld) world).sendParticles(ParticleTypes.ITEM_SNOWBALL,
                     player.getX() + look.x, player.getEyeY(), player.getZ() + look.z,
                     10, 0.2, 0.2, 0.2, 0.05);
         }
@@ -100,7 +100,7 @@ public class IceShardSpell extends Spell {
 
                     // Spawn ice particles
                     if (level instanceof ServerWorld) {
-                        ((ServerWorld) level).sendParticles(ParticleTypes.SNOWFLAKE,
+                        ((ServerWorld) level).sendParticles(ParticleTypes.ITEM_SNOWBALL,
                                 target.getX(), target.getY() + 1, target.getZ(),
                                 20, 0.5, 0.5, 0.5, 0.1);
                     }
