@@ -104,44 +104,40 @@ public class ManaHudOverlay {
         if (spell == null)
             return;
 
-        // Position: center bottom of screen, above hotbar
-        int centerX = screenWidth / 2;
-        int y = screenHeight - 60;
+        // Position: TOP LEFT corner, below mana bar (not center screen)
+        int x = BAR_X_OFFSET;
+        int y = BAR_Y_OFFSET + BAR_HEIGHT + 25; // Below mana bar and text
 
         // Draw spell name with fancy formatting
-        String spellName = "◆ " + spell.getDisplayName().getString() + " ◆";
+        String spellName = "◆ " + spell.getDisplayName().getString();
         int spellColor = spell.getSpellColor();
 
         // Draw background box
         int textWidth = mc.font.width(spellName);
-        int boxX = centerX - textWidth / 2 - 5;
+        int boxX = x - 3;
         int boxY = y - 2;
-        int boxWidth = textWidth + 10;
+        int boxWidth = textWidth + 6;
         int boxHeight = 14;
 
         // Semi-transparent background
-        AbstractGui.fill(matrixStack, boxX, boxY, boxX + boxWidth, boxY + boxHeight, 0x80000000);
+        AbstractGui.fill(matrixStack, screenWidth - BAR_X_OFFSET - boxWidth - 3, boxY,
+                screenWidth - BAR_X_OFFSET + 3, boxY + boxHeight, 0x80000000);
 
         // Draw border with spell color
         int borderColor = (0xFF << 24) | spellColor;
-        AbstractGui.fill(matrixStack, boxX, boxY, boxX + boxWidth, boxY + 1, borderColor);
-        AbstractGui.fill(matrixStack, boxX, boxY + boxHeight - 1, boxX + boxWidth, boxY + boxHeight, borderColor);
-        AbstractGui.fill(matrixStack, boxX, boxY, boxX + 1, boxY + boxHeight, borderColor);
-        AbstractGui.fill(matrixStack, boxX + boxWidth - 1, boxY, boxX + boxWidth, boxY + boxHeight, borderColor);
+        int rightX = screenWidth - BAR_X_OFFSET - boxWidth - 3;
+        AbstractGui.fill(matrixStack, rightX, boxY, screenWidth - BAR_X_OFFSET + 3, boxY + 1, borderColor);
+        AbstractGui.fill(matrixStack, rightX, boxY + boxHeight - 1, screenWidth - BAR_X_OFFSET + 3, boxY + boxHeight,
+                borderColor);
 
-        // Draw spell name centered
-        mc.font.drawShadow(matrixStack, spellName, centerX - textWidth / 2.0f, y, spellColor);
+        // Draw spell name (right-aligned, below mana bar)
+        mc.font.drawShadow(matrixStack, spellName, screenWidth - BAR_X_OFFSET - textWidth, y, spellColor);
 
-        // Draw tier indicator
-        String tierName = wand.getTier().getDisplayName();
+        // Draw tier indicator smaller, right aligned
+        String tierName = "[" + wand.getTier().getDisplayName() + "]";
         TextFormatting tierColor = wand.getTier().getColor();
         int tierWidth = mc.font.width(tierName);
-        mc.font.drawShadow(matrixStack, tierName, centerX - tierWidth / 2.0f, y + 12,
-                tierColor.getColor() != null ? tierColor.getColor() : 0xFFFFFF);
-
-        // Draw spell hotkeys hint
-        String hint = "[R] Next  [F] Prev";
-        int hintWidth = mc.font.width(hint);
-        mc.font.drawShadow(matrixStack, hint, centerX - hintWidth / 2.0f, y - 12, 0x888888);
+        mc.font.drawShadow(matrixStack, tierName, screenWidth - BAR_X_OFFSET - tierWidth, y + 11,
+                tierColor.getColor() != null ? tierColor.getColor() : 0xAAAAAA);
     }
 }

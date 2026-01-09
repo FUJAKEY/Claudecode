@@ -45,7 +45,15 @@ public class ArcaneMagicMod {
         // Register event handlers
         MinecraftForge.EVENT_BUS.register(new ManaEvents());
 
+        // Register commands
+        MinecraftForge.EVENT_BUS.addListener(this::onRegisterCommands);
+
         LOGGER.info("ArcaneMagic mod initialized!");
+    }
+
+    private void onRegisterCommands(net.minecraftforge.event.RegisterCommandsEvent event) {
+        com.arcanemagic.command.ManaCommand.register(event.getDispatcher());
+        LOGGER.info("ArcaneMagic commands registered!");
     }
 
     private void setup(final FMLCommonSetupEvent event) {
