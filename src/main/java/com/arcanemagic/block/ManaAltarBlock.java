@@ -72,7 +72,7 @@ public class ManaAltarBlock extends Block {
         List<PlayerEntity> players = world.getEntitiesOfClass(PlayerEntity.class, area);
 
         for (PlayerEntity player : players) {
-            player.getCapability(ManaCapability.MANA_CAPABILITY).ifPresent(mana -> {
+            player.getCapability(ManaCapability.getCapability()).ifPresent(mana -> {
                 mana.regenerateMana(BONUS_REGEN);
             });
         }

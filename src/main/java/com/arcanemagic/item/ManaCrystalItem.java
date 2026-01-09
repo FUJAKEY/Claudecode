@@ -39,7 +39,7 @@ public class ManaCrystalItem extends Item {
 
         // Check if player needs mana
         boolean[] needsMana = { false };
-        player.getCapability(ManaCapability.MANA_CAPABILITY).ifPresent(mana -> {
+        player.getCapability(ManaCapability.getCapability()).ifPresent(mana -> {
             if (mana.getMana() < mana.getMaxMana()) {
                 needsMana[0] = true;
             }
@@ -58,7 +58,7 @@ public class ManaCrystalItem extends Item {
         if (entity instanceof PlayerEntity && !world.isClientSide) {
             PlayerEntity player = (PlayerEntity) entity;
 
-            player.getCapability(ManaCapability.MANA_CAPABILITY).ifPresent(mana -> {
+            player.getCapability(ManaCapability.getCapability()).ifPresent(mana -> {
                 mana.regenerateMana(MANA_RESTORE);
 
                 // Play sound

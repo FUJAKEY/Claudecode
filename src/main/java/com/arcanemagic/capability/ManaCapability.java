@@ -10,9 +10,6 @@ import net.minecraftforge.common.capabilities.CapabilityManager;
  */
 public interface ManaCapability {
 
-    @CapabilityInject(ManaCapability.class)
-    Capability<ManaCapability> MANA_CAPABILITY = null;
-
     /**
      * Get current mana amount
      */
@@ -78,5 +75,20 @@ public interface ManaCapability {
                 ManaCapability.class,
                 new ManaCapabilityStorage(),
                 ManaStorage::new);
+    }
+
+    /**
+     * Get the capability instance
+     */
+    static Capability<ManaCapability> getCapability() {
+        return CapabilityHolder.MANA_CAPABILITY;
+    }
+
+    /**
+     * Holder class for the capability instance to avoid interface field issues
+     */
+    class CapabilityHolder {
+        @CapabilityInject(ManaCapability.class)
+        public static Capability<ManaCapability> MANA_CAPABILITY = null;
     }
 }

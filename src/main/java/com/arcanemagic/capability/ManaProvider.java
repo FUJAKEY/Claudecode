@@ -30,7 +30,7 @@ public class ManaProvider implements ICapabilitySerializable<CompoundNBT> {
     @Nonnull
     @Override
     public <T> LazyOptional<T> getCapability(@Nonnull Capability<T> cap, @Nullable Direction side) {
-        if (cap == ManaCapability.MANA_CAPABILITY) {
+        if (cap == ManaCapability.getCapability()) {
             return optional.cast();
         }
         return LazyOptional.empty();

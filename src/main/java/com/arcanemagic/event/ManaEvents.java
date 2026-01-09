@@ -31,7 +31,7 @@ public class ManaEvents {
     public void onAttachCapabilities(AttachCapabilitiesEvent<Entity> event) {
         if (event.getObject() instanceof PlayerEntity) {
             PlayerEntity player = (PlayerEntity) event.getObject();
-            if (!player.getCapability(ManaCapability.MANA_CAPABILITY).isPresent()) {
+            if (!player.getCapability(ManaCapability.getCapability()).isPresent()) {
                 event.addCapability(MANA_CAP_ID, new ManaProvider(player));
             }
         }
@@ -45,8 +45,8 @@ public class ManaEvents {
         if (!event.isWasDeath())
             return;
 
-        event.getOriginal().getCapability(ManaCapability.MANA_CAPABILITY).ifPresent(oldMana -> {
-            event.getPlayer().getCapability(ManaCapability.MANA_CAPABILITY).ifPresent(newMana -> {
+        event.getOriginal().getCapability(ManaCapability.getCapability()).ifPresent(oldMana -> {
+            event.getPlayer().getCapability(ManaCapability.getCapability()).ifPresent(newMana -> {
                 newMana.copyFrom(oldMana);
             });
         });
@@ -68,7 +68,7 @@ public class ManaEvents {
         if (tickCounter >= 20) {
             tickCounter = 0;
 
-            event.player.getCapability(ManaCapability.MANA_CAPABILITY).ifPresent(mana -> {
+            event.player.getCapability(ManaCapability.getCapability()).ifPresent(mana -> {
                 int oldMana = mana.getMana();
                 mana.regenerateMana(mana.getManaRegenRate());
 
@@ -87,7 +87,7 @@ public class ManaEvents {
     public void onPlayerLogin(PlayerEvent.PlayerLoggedInEvent event) {
         if (event.getPlayer() instanceof ServerPlayerEntity) {
             ServerPlayerEntity player = (ServerPlayerEntity) event.getPlayer();
-            player.getCapability(ManaCapability.MANA_CAPABILITY).ifPresent(mana -> {
+            player.getCapability(ManaCapability.getCapability()).ifPresent(mana -> {
                 syncManaToClient(player, mana);
             });
         }
@@ -100,7 +100,7 @@ public class ManaEvents {
     public void onPlayerRespawn(PlayerEvent.PlayerRespawnEvent event) {
         if (event.getPlayer() instanceof ServerPlayerEntity) {
             ServerPlayerEntity player = (ServerPlayerEntity) event.getPlayer();
-            player.getCapability(ManaCapability.MANA_CAPABILITY).ifPresent(mana -> {
+            player.getCapability(ManaCapability.getCapability()).ifPresent(mana -> {
                 syncManaToClient(player, mana);
             });
         }
@@ -113,7 +113,7 @@ public class ManaEvents {
     public void onPlayerChangeDimension(PlayerEvent.PlayerChangedDimensionEvent event) {
         if (event.getPlayer() instanceof ServerPlayerEntity) {
             ServerPlayerEntity player = (ServerPlayerEntity) event.getPlayer();
-            player.getCapability(ManaCapability.MANA_CAPABILITY).ifPresent(mana -> {
+            player.getCapability(ManaCapability.getCapability()).ifPresent(mana -> {
                 syncManaToClient(player, mana);
             });
         }

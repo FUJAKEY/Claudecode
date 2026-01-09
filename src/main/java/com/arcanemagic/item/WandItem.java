@@ -111,7 +111,7 @@ public class WandItem extends Item {
         if (!world.isClientSide) {
             boolean[] hasMana = { false };
 
-            player.getCapability(ManaCapability.MANA_CAPABILITY).ifPresent(mana -> {
+            player.getCapability(ManaCapability.getCapability()).ifPresent(mana -> {
                 if (mana.consumeMana(manaCost)) {
                     hasMana[0] = true;
 
