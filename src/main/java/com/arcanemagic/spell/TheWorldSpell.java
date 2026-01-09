@@ -78,32 +78,20 @@ public class TheWorldSpell extends Spell {
         ACTIVE_TIME_STOPS.put(player.getUUID(), data);
 
         // Initial flash effect
-        createBarrierParticles(serverWorld, center, RADIUS, true);
+        createBarrierParticles(serverWorld, center, BARRIER_RADIUS, true);
 
         // Find and freeze all entities in radius (except caster)
+        // Use FREEZE_RADIUS for initial freeze to be safe
         AxisAlignedBB area = new AxisAlignedBB(
-                center.x - RADIUS, center.y - RADIUS, center.z - RADIUS,
-                center.x + RADIUS, center.y + RADIUS, center.z + RADIUS);
+                center.x - FREEZE_RADIUS, center.y - FREEZE_RADIUS, center.z - FREEZE_RADIUS,
+                center.x + FREEZE_RADIUS, center.y + FREEZE_RADIUS, center.z + FREEZE_RADIUS);
 
         List<Entity> entities = world.getEntities(player, area,
-                e -> e.distanceToSqr(center) <= RADIUS * RADIUS && e instanceof LivingEntity);
+                e -> e.distanceToSqr(center) <= FREEZE_RADIUS * FREEZE_RADIUS && e instanceof LivingEntity);
 
         for (Entity entity : entities) {
             if (entity instanceof LivingEntity && entity != player) {
-                LivingEntity living = (LivingEntity) entity;
-
-                FrozenEntityData frozenData = new FrozenEntityData(
-                        living.position(),
-                        living.getDeltaMovement(),
-                        living.yRot,
-                        living.xRot,
-                        endTime,
-                        player.getUUID());
-                FROZEN_ENTITIES.put(living.getUUID(), frozenData);
-
-                // Stop movement immediately
-                living.setDeltaMovement(0, 0, 0);
-                living.setNoGravity(true);
+                freezeEntity((LivingEntity) entity, endTime, player.getUUID());
             }
         }
 
@@ -154,6 +142,15 @@ public class TheWorldSpell extends Spell {
     /**
      * Called every world tick to maintain time stop effects
      */
+    // Updated constants
+    public static final double BARRIER_RADIUS = 30.0;
+    public static final double FREEZE_RADIUS = 28.5; // Slightly smaller to prevent glitching at edge
+
+    // ... (rest of class structure remains, logic changes below)
+
+    /**
+     * Called every world tick to maintain time stop effects
+     */
     public static void tickTimeStop(World world) {
         if (world.isClientSide)
             return;
@@ -174,11 +171,59 @@ public class TheWorldSpell extends Spell {
 
             // Render barrier particles every 5 ticks
             if (currentTime % 5 == 0) {
-                createBarrierParticles(serverWorld, data.center, RADIUS, false);
+                createBarrierParticles(serverWorld, data.center, BARRIER_RADIUS, false);
             }
 
-            // Block entities from passing through barrier
-            enforceBarrier(serverWorld, data);
+            // Manage Area Effect (Freeze + Barrier)
+            // Scan area slightly larger than barrier
+            AxisAlignedBB area = new AxisAlignedBB(
+                    data.center.x - BARRIER_RADIUS - 3, data.center.y - BARRIER_RADIUS - 3,
+                    data.center.z - BARRIER_RADIUS - 3,
+                    data.center.x + BARRIER_RADIUS + 3, data.center.y + BARRIER_RADIUS + 3,
+                    data.center.z + BARRIER_RADIUS + 3);
+
+            List<Entity> nearbyEntities = serverWorld.getEntities((Entity) null, area,
+                    e -> e instanceof LivingEntity && !e.getUUID().equals(data.casterUUID));
+
+            for (Entity entity : nearbyEntities) {
+                double dist = entity.position().distanceTo(data.center);
+                LivingEntity living = (LivingEntity) entity;
+
+                if (dist <= FREEZE_RADIUS) {
+                    // INNER ZONE: FREEZE
+                    // Start freezing if not already frozen
+                    if (!FROZEN_ENTITIES.containsKey(living.getUUID())) {
+                        freezeEntity(living, data.endTime, data.casterUUID);
+                    }
+                } else if (dist < BARRIER_RADIUS + 2.0) {
+                    // BARRIER ZONE (28.5 to ~32.0): PUSH
+
+                    // If they were frozen but are now in barrier zone (e.g. pushed), unfreeze so
+                    // physics works
+                    if (FROZEN_ENTITIES.containsKey(living.getUUID())) {
+                        unfreezeEntity(serverWorld, living.getUUID());
+                    }
+
+                    // Calculate push direction
+                    Vector3d toCenter = data.center.subtract(entity.position()).normalize();
+                    boolean isInside = dist < BARRIER_RADIUS;
+
+                    // Logic: If inside barrier radius, push IN (to freeze). If outside, push OUT.
+                    Vector3d pushDir = isInside ? toCenter : toCenter.scale(-1);
+
+                    // Stronger push
+                    double pushStrength = 0.6;
+                    entity.setDeltaMovement(pushDir.scale(pushStrength));
+                    entity.hurtMarked = true;
+
+                    // Particles
+                    if (currentTime % 5 == 0) {
+                        serverWorld.sendParticles(ParticleTypes.ENCHANT,
+                                entity.getX(), entity.getY() + 1, entity.getZ(),
+                                5, 0.2, 0.2, 0.2, 0.05);
+                    }
+                }
+            }
         }
 
         // Clean up expired time stops
@@ -202,7 +247,7 @@ public class TheWorldSpell extends Spell {
             if (entity instanceof LivingEntity) {
                 LivingEntity living = (LivingEntity) entity;
 
-                // Lock position
+                // Force lock position
                 living.setPos(data.frozenPos.x, data.frozenPos.y, data.frozenPos.z);
                 living.setDeltaMovement(0, 0, 0);
                 living.yRot = data.frozenYaw;
@@ -212,73 +257,60 @@ public class TheWorldSpell extends Spell {
                 living.yBodyRot = data.frozenYaw;
                 living.yHeadRot = data.frozenYaw;
 
+                // Prevent jumping/sneaking
+                living.setJumping(false);
+                living.setShiftKeyDown(false);
+
                 // Frozen particle effect
                 if (currentTime % 10 == 0) {
                     serverWorld.sendParticles(ParticleTypes.END_ROD,
                             living.getX(), living.getY() + 1, living.getZ(),
-                            3, 0.3, 0.5, 0.3, 0.01);
+                            1, 0.2, 0.5, 0.2, 0.01);
                 }
+            } else {
+                // Entity maybe despawned or dead
+                toUnfreeze.add(entry.getKey());
             }
         }
 
         // Unfreeze expired entities
         for (UUID id : toUnfreeze) {
-            Entity entity = serverWorld.getEntity(id);
-            if (entity instanceof LivingEntity) {
-                LivingEntity living = (LivingEntity) entity;
-                FrozenEntityData data = FROZEN_ENTITIES.get(id);
-
-                living.setNoGravity(false);
-                living.setDeltaMovement(data.frozenMotion);
-
-                // Unfreeze flash
-                serverWorld.sendParticles(ParticleTypes.FLASH,
-                        living.getX(), living.getY() + 1, living.getZ(),
-                        3, 0.5, 0.5, 0.5, 0);
-            }
-            FROZEN_ENTITIES.remove(id);
+            unfreezeEntity(serverWorld, id);
         }
     }
 
-    /**
-     * Enforce barrier - push entities back if they try to cross
-     */
-    private static void enforceBarrier(ServerWorld world, TimeStopData data) {
-        double barrierThickness = 2.0;
+    private static void freezeEntity(LivingEntity living, long endTime, UUID casterId) {
+        FrozenEntityData frozenData = new FrozenEntityData(
+                living.position(),
+                living.getDeltaMovement(),
+                living.yRot,
+                living.xRot,
+                endTime,
+                casterId);
+        FROZEN_ENTITIES.put(living.getUUID(), frozenData);
 
-        // Check all entities near the barrier edge
-        AxisAlignedBB outerArea = new AxisAlignedBB(
-                data.center.x - RADIUS - barrierThickness,
-                data.center.y - RADIUS - barrierThickness,
-                data.center.z - RADIUS - barrierThickness,
-                data.center.x + RADIUS + barrierThickness,
-                data.center.y + RADIUS + barrierThickness,
-                data.center.z + RADIUS + barrierThickness);
+        // Stop movement immediately
+        living.setDeltaMovement(0, 0, 0);
+        living.setNoGravity(true);
+    }
 
-        List<Entity> nearbyEntities = world.getEntities((Entity) null, outerArea,
-                e -> e instanceof LivingEntity && !e.getUUID().equals(data.casterUUID));
+    private static void unfreezeEntity(ServerWorld world, UUID entityId) {
+        if (!FROZEN_ENTITIES.containsKey(entityId))
+            return;
 
-        for (Entity entity : nearbyEntities) {
-            double distance = entity.position().distanceTo(data.center);
+        FrozenEntityData data = FROZEN_ENTITIES.get(entityId);
+        FROZEN_ENTITIES.remove(entityId);
 
-            // Entity trying to enter from outside
-            if (distance > RADIUS - 1 && distance < RADIUS + barrierThickness) {
-                // Calculate push direction
-                Vector3d toCenter = data.center.subtract(entity.position()).normalize();
-                boolean isInside = distance < RADIUS;
+        Entity entity = world.getEntity(entityId);
+        if (entity instanceof LivingEntity) {
+            LivingEntity living = (LivingEntity) entity;
+            living.setNoGravity(false);
+            living.setDeltaMovement(data.frozenMotion);
 
-                // Push back
-                Vector3d pushDir = isInside ? toCenter.scale(-1) : toCenter;
-                double pushStrength = 0.5;
-
-                entity.setDeltaMovement(pushDir.scale(pushStrength));
-                entity.hurtMarked = true;
-
-                // Barrier collision particles
-                world.sendParticles(ParticleTypes.ENCHANT,
-                        entity.getX(), entity.getY() + 1, entity.getZ(),
-                        10, 0.3, 0.3, 0.3, 0.1);
-            }
+            // Unfreeze flash
+            world.sendParticles(ParticleTypes.FLASH,
+                    living.getX(), living.getY() + 1, living.getZ(),
+                    3, 0.5, 0.5, 0.5, 0);
         }
     }
 
