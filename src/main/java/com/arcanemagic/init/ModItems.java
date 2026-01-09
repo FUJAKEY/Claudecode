@@ -87,6 +87,18 @@ public class ModItems {
                         () -> new SpellTomeItem(new DragonsWrathSpell(), defaultProps().stacksTo(1)
                                         .rarity(net.minecraft.item.Rarity.EPIC)));
 
+        public static final RegistryObject<Item> TOME_THE_WORLD = ITEMS.register("tome_the_world",
+                        () -> new SpellTomeItem(new TheWorldSpell(), defaultProps().stacksTo(1)
+                                        .rarity(net.minecraft.item.Rarity.EPIC)));
+
+        // ========== DIVINE STAFF ==========
+        public static final RegistryObject<Item> DIVINE_CORE = ITEMS.register("divine_core",
+                        () -> new Item(defaultProps().stacksTo(1).rarity(net.minecraft.item.Rarity.EPIC)));
+
+        public static final RegistryObject<Item> DIVINE_STAFF = ITEMS.register("divine_staff",
+                        () -> new WandItem(WandItem.WandTier.DIVINE, defaultProps().stacksTo(1)
+                                        .rarity(net.minecraft.item.Rarity.EPIC)));
+
         // ========== BLOCK ITEMS ==========
         public static final RegistryObject<Item> MANA_ALTAR_ITEM = ITEMS.register("mana_altar",
                         () -> new BlockItem(ModBlocks.MANA_ALTAR.get(), defaultProps()));

@@ -1,0 +1,11 @@
+{
+    "the_world": {
+        "subtitle": "The World!",
+        "sounds": [
+            {
+                "name": "arcanemagic:the_world",
+                "stream": false
+            }
+        ]
+    }
+}

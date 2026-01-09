@@ -312,7 +312,8 @@ public class WandItem extends Item {
         APPRENTICE(1, 20, 0.0f, TextFormatting.WHITE, Rarity.COMMON, "Apprentice"),
         ADEPT(2, 40, 0.15f, TextFormatting.GREEN, Rarity.UNCOMMON, "Adept"),
         MASTER(3, 60, 0.30f, TextFormatting.BLUE, Rarity.RARE, "Master"),
-        ARCHMAGE(4, 100, 0.50f, TextFormatting.LIGHT_PURPLE, Rarity.EPIC, "Archmage");
+        ARCHMAGE(4, 100, 0.50f, TextFormatting.LIGHT_PURPLE, Rarity.EPIC, "Archmage"),
+        DIVINE(9, 200, 0.70f, TextFormatting.GOLD, Rarity.EPIC, "Divine");
 
         private final int spellSlots;
         private final int maxManaCost;

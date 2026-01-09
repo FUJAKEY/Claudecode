@@ -1,18 +1,22 @@
 package com.arcanemagic.client;
 
 import com.arcanemagic.ArcaneMagicMod;
+import com.arcanemagic.item.WandItem;
+import com.arcanemagic.spell.Spell;
 import com.mojang.blaze3d.matrix.MatrixStack;
 import com.mojang.blaze3d.systems.RenderSystem;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.AbstractGui;
+import net.minecraft.item.ItemStack;
 import net.minecraft.util.ResourceLocation;
+import net.minecraft.util.text.TextFormatting;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 import net.minecraftforge.client.event.RenderGameOverlayEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 
 /**
- * Renders the mana bar HUD overlay
+ * Renders the mana bar and current spell HUD overlay
  */
 @OnlyIn(Dist.CLIENT)
 public class ManaHudOverlay {
@@ -66,6 +70,78 @@ public class ManaHudOverlay {
         // Draw text with shadow
         mc.font.drawShadow(matrixStack, manaText, textX, textY, 0x00BFFF);
 
+        // ========== CURRENT SPELL DISPLAY ==========
+        renderCurrentSpell(mc, matrixStack, screenWidth, screenHeight);
+
         RenderSystem.disableBlend();
+    }
+
+    private void renderCurrentSpell(Minecraft mc, MatrixStack matrixStack, int screenWidth, int screenHeight) {
+        // Check if player is holding a wand
+        ItemStack mainHand = mc.player.getMainHandItem();
+        ItemStack offHand = mc.player.getOffhandItem();
+
+        ItemStack wandStack = null;
+        WandItem wand = null;
+
+        if (mainHand.getItem() instanceof WandItem) {
+            wandStack = mainHand;
+            wand = (WandItem) mainHand.getItem();
+        } else if (offHand.getItem() instanceof WandItem) {
+            wandStack = offHand;
+            wand = (WandItem) offHand.getItem();
+        }
+
+        if (wandStack == null || wand == null)
+            return;
+
+        // Get selected spell
+        String selectedSpellId = wand.getSelectedSpellId(wandStack);
+        if (selectedSpellId == null || selectedSpellId.isEmpty())
+            return;
+
+        Spell spell = WandItem.getSpell(selectedSpellId);
+        if (spell == null)
+            return;
+
+        // Position: center bottom of screen, above hotbar
+        int centerX = screenWidth / 2;
+        int y = screenHeight - 60;
+
+        // Draw spell name with fancy formatting
+        String spellName = "◆ " + spell.getDisplayName().getString() + " ◆";
+        int spellColor = spell.getSpellColor();
+
+        // Draw background box
+        int textWidth = mc.font.width(spellName);
+        int boxX = centerX - textWidth / 2 - 5;
+        int boxY = y - 2;
+        int boxWidth = textWidth + 10;
+        int boxHeight = 14;
+
+        // Semi-transparent background
+        AbstractGui.fill(matrixStack, boxX, boxY, boxX + boxWidth, boxY + boxHeight, 0x80000000);
+
+        // Draw border with spell color
+        int borderColor = (0xFF << 24) | spellColor;
+        AbstractGui.fill(matrixStack, boxX, boxY, boxX + boxWidth, boxY + 1, borderColor);
+        AbstractGui.fill(matrixStack, boxX, boxY + boxHeight - 1, boxX + boxWidth, boxY + boxHeight, borderColor);
+        AbstractGui.fill(matrixStack, boxX, boxY, boxX + 1, boxY + boxHeight, borderColor);
+        AbstractGui.fill(matrixStack, boxX + boxWidth - 1, boxY, boxX + boxWidth, boxY + boxHeight, borderColor);
+
+        // Draw spell name centered
+        mc.font.drawShadow(matrixStack, spellName, centerX - textWidth / 2.0f, y, spellColor);
+
+        // Draw tier indicator
+        String tierName = wand.getTier().getDisplayName();
+        TextFormatting tierColor = wand.getTier().getColor();
+        int tierWidth = mc.font.width(tierName);
+        mc.font.drawShadow(matrixStack, tierName, centerX - tierWidth / 2.0f, y + 12,
+                tierColor.getColor() != null ? tierColor.getColor() : 0xFFFFFF);
+
+        // Draw spell hotkeys hint
+        String hint = "[R] Next  [F] Prev";
+        int hintWidth = mc.font.width(hint);
+        mc.font.drawShadow(matrixStack, hint, centerX - hintWidth / 2.0f, y - 12, 0x888888);
     }
 }

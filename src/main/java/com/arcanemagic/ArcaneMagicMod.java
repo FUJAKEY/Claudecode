@@ -36,6 +36,7 @@ public class ArcaneMagicMod {
         // Register deferred registries
         ModItems.ITEMS.register(modEventBus);
         ModBlocks.BLOCKS.register(modEventBus);
+        com.arcanemagic.init.ModSounds.SOUNDS.register(modEventBus);
 
         // Register lifecycle events
         modEventBus.addListener(this::setup);
